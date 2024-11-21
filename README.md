@@ -1,5 +1,5 @@
 # <img height="100px" src="./images/logo.png" />
-A simple IPTV player you can host using Docker and stream via a website.
+## A Docker hosted IPTV Player
 ![screenshot](https://github.com/Limmer55/streamdock/blob/main/images/Screenshot1.png?raw=true)
 ## Features
 - 📺 **Watch from everywhere**: No client required. Simply use your browser.
