@@ -92,7 +92,7 @@
                         container.appendChild(button);
                     });
 
-                    // "More"-Button erstellen
+                    
                     if (hiddenCountries.length > 0) {
                         const moreButton = document.createElement('button');
                         moreButton.className = 'country-button';
@@ -108,7 +108,7 @@
                     const container = document.querySelector('.country-buttons-container');
                     container.innerHTML = '';
 
-                    // Alle Länder rendern
+                    
                     countries.forEach(country => {
                         const button = document.createElement('button');
                         button.className = 'country-button';
@@ -126,10 +126,9 @@
                 document.getElementById('countrySearch').addEventListener('input', (event) => {
                     const searchQuery = event.target.value.toLowerCase();
                     if (searchQuery === '') {
-                        // Wenn das Suchfeld leer ist, zeige nur die Standardländer
+                        
                         renderCountryButtons(allCountries);
-                    } else {
-                        // Bei Eingabe, durchsuche alle Länder und zeige die gefilterten Ergebnisse an
+                    } else {                        
                         const filteredCountries = allCountries.filter(country =>
                             country.name.toLowerCase().includes(searchQuery)
                         );

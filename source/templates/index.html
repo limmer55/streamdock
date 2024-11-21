@@ -138,9 +138,9 @@
                             iconImg.alt = "Icon";
                             iconImg.classList.add('channel-icon');
 
-                            // Hinzufügen des onerror-Handlers
+                            
                             iconImg.onerror = function() {
-                                this.onerror = null; // Verhindern von Endlosschleifen
+                                this.onerror = null; 
                                 this.src = defaultIconUrl;
                             };
 
@@ -201,7 +201,7 @@
                         const result = channel.cloneNode(true);
                         result.classList.remove('selected');
 
-                        // Hinzufügen des onerror-Handlers
+                        
                         const img = result.querySelector('img.channel-icon');
                         if (img) {
                             img.onerror = function() {
@@ -257,14 +257,14 @@
                     tracks[i].mode = 'hidden';
                 }
 
-                // Native Auflösung ermitteln
+                
                 const videoElement = window.player.tech().el();
                 const nativeWidth = videoElement.videoWidth;
                 const nativeHeight = videoElement.videoHeight;
 
                 console.log(`Native Resolution: ${nativeWidth}x${nativeHeight}`);
 
-                // Größe des Containers anpassen
+                
                 adjustVideoContainer(nativeWidth, nativeHeight);
             });
 
@@ -291,14 +291,14 @@
         const playerContainer = document.getElementById("player-container");
         const videoElement = document.getElementById("videoPlayer");
 
-        // Berechnen Sie das Verhältnis der nativen Auflösung zur aktuellen Fenstergröße
+        
         const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight * 0.8; // Da max-height auf 80vh gesetzt ist
+        const windowHeight = window.innerHeight * 0.8; 
 
         let displayWidth = nativeWidth;
         let displayHeight = nativeHeight;
 
-        // Überprüfen, ob die native Größe größer als die verfügbaren Fenstergrößen ist
+        
         if (nativeWidth > windowWidth) {
             const ratio = windowWidth / nativeWidth;
             displayWidth = windowWidth;
@@ -311,16 +311,16 @@
             displayWidth = displayWidth * ratio;
         }
 
-        // Setzen Sie die Größe des Containers
+        
         playerContainer.style.width = `${displayWidth}px`;
         playerContainer.style.height = `${displayHeight}px`;
 
-        // Optional: Stellen Sie sicher, dass das Video die volle Größe des Containers ausfüllt
+        
         videoElement.style.width = "100%";
         videoElement.style.height = "100%";
     }
 
-    // Optional: Passen Sie den Container bei Fensteränderungen an
+   
     window.addEventListener('resize', function() {
         if (window.player && window.player.tech() && window.player.tech().el()) {
             const videoElement = window.player.tech().el();
@@ -362,9 +362,9 @@
             iconImg.alt = "Icon";
             iconImg.classList.add('channel-icon');
 
-            // Hinzufügen des onerror-Handlers
+            
             iconImg.onerror = function() {
-                this.onerror = null; // Verhindern von Endlosschleifen
+                this.onerror = null; 
                 this.src = getDefaultIconUrl();
             };
 
