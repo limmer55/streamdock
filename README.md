@@ -25,7 +25,10 @@ services:
     image: ghcr.io/limmer55/streamdock:latest
     container_name: streamdock
     network_mode: host
+    environment:
+      M3U_URL: "https://iptv-org.github.io/iptv/index.m3u" # optional, can be set in settings later
     restart: unless-stopped
+
 ```
 #### Start the service using Docker Compose
 ```bash
