@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+
+    <script>
+        function setTheme() {
+            const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+            const currentTheme = prefersDarkScheme.matches ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", currentTheme);
+        }
+
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener('change', e => {
+            const newColorScheme = e.matches ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", newColorScheme);
+        });
+
+        window.addEventListener('DOMContentLoaded', setTheme);
+    </script>
+</head>
+<body>
+    <div class="content">
+        <div class="menu-button-container">
+            <button class="menu-button" onclick="toggleMenu()">☰</button>
+            <div id="dropdownMenu" class="dropdown-menu" style="display: none;">
+                <a href="/">Home</a>
+            </div>
+        </div>
+
+        <h1>Settings</h1>
+        
+        {% if success %}
+            <p style="color: green;">{{ success }}</p>
+        {% endif %}
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+
+        <form id="settingsForm" method="POST" action="/settings">
+            <h2 for="m3u_url">M3U Playlist URL:</label><br>
+            <input type="url" id="m3u_url" name="m3u_url" placeholder="https://iptv-org.github.io/iptv/index.m3u" value="{{ m3u_url }}" required style="width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid var(--secondary);"><br>
+            <button type="submit" name="action" value="save" class="menu-button" style="padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Save</button>
+        </form>
+
+        <div class="country-container">
+            <label>Choose Free Playlist from iptv-org (most channels are country-locked!)</label><br>
+            <input type="text" id="countrySearch" placeholder="Search countries..." style="width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid var(--secondary);">
+            <div class="country-buttons-container"></div>
+        </div>
+        
+        <script>
+            let allCountries = []; 
+        
+            fetch('/static/data/countries.json')
+                .then(response => response.json())
+                .then(countries => {
+                    allCountries = countries; 
+                    renderCountryButtons(countries);
+                })
+                .catch(error => console.error('Error loading countries:', error));
+        
+            
+                function renderCountryButtons(countries) {
+                    const container = document.querySelector('.country-buttons-container');
+                    container.innerHTML = '';
+
+                    // Länder filtern, die standardmäßig angezeigt werden sollen
+                    const defaultCountries = countries.filter(country =>
+                        country.name.toLowerCase().includes('united states') ||
+                        country.name.toLowerCase().includes('united kingdom') ||
+                        country.name.toLowerCase().includes('canada') ||
+                        country.name.toLowerCase().includes('australia') ||
+                        country.name.toLowerCase().includes('germany')
+                    );
+
+                    const hiddenCountries = countries.filter(country => !defaultCountries.includes(country));
+
+                    // Standard-Länder rendern
+                    defaultCountries.forEach(country => {
+                        const button = document.createElement('button');
+                        button.className = 'country-button';
+                        button.innerHTML = `${country.name}`;
+                        button.onclick = () => {
+                            document.getElementById('m3u_url').value = country.playlist;
+                        };
+                        container.appendChild(button);
+                    });
+
+                    // "More"-Button erstellen
+                    if (hiddenCountries.length > 0) {
+                        const moreButton = document.createElement('button');
+                        moreButton.className = 'country-button';
+                        moreButton.innerHTML = '...more';
+                        moreButton.onclick = () => {
+                            renderAllCountries(countries);
+                        };
+                        container.appendChild(moreButton);
+                    }
+                }
+
+                function renderAllCountries(countries) {
+                    const container = document.querySelector('.country-buttons-container');
+                    container.innerHTML = '';
+
+                    // Alle Länder rendern
+                    countries.forEach(country => {
+                        const button = document.createElement('button');
+                        button.className = 'country-button';
+                        button.innerHTML = `${country.name}`;
+                        button.onclick = () => {
+                            document.getElementById('m3u_url').value = country.playlist;
+                        };
+                        container.appendChild(button);
+                    });
+                }
+
+
+        
+            
+                document.getElementById('countrySearch').addEventListener('input', (event) => {
+                    const searchQuery = event.target.value.toLowerCase();
+                    if (searchQuery === '') {
+                        // Wenn das Suchfeld leer ist, zeige nur die Standardländer
+                        renderCountryButtons(allCountries);
+                    } else {
+                        // Bei Eingabe, durchsuche alle Länder und zeige die gefilterten Ergebnisse an
+                        const filteredCountries = allCountries.filter(country =>
+                            country.name.toLowerCase().includes(searchQuery)
+                        );
+                        renderAllCountries(filteredCountries);
+                    }
+                });
+
+        </script>
+        
+
+    
+        
+    </div>
+    
+
+    
+    
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script src="https://unpkg.com/@videojs/http-streaming@latest/dist/videojs-http-streaming.min.js"></script>
+
+    <script>
+        function toggleMenu() {
+            const dropdown = document.getElementById("dropdownMenu");
+            if (dropdown.style.display === "none" || dropdown.style.display === "") {
+                dropdown.style.display = "block";
+            } else {
+                dropdown.style.display = "none";
+            }
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-button')) {
+                const dropdown = document.getElementById("dropdownMenu");
+                if (dropdown.style.display === "block") {
+                    dropdown.style.display = "none";
+                }
+            }
+        }
+    </script>
+    
+</body>
+</html>
