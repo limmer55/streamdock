@@ -13,7 +13,7 @@
 ## Installation
 ### Using docker
 ```bash
-docker run -d --name streamdock --network host --restart unless-stopped ghcr.io/lkenner/m3u8player:latest
+docker run -d --name streamdock --network host --restart unless-stopped ghcr.io/limmer55/streamdock:latest
 
 ```
 ### Docker Compose
