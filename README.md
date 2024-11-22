@@ -40,7 +40,7 @@ docker-compose up -d
 ```bash
 http://[IPADDRESS/HOSTNAME]:6050/
 ```
-When you don't set a M3U_URL, open settings page and set it there.
+If you don't set a M3U_URL, open settings page and set it there.
 
 
 ## Why?
