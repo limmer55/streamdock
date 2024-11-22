@@ -38,5 +38,15 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ github.ref_name == 'main' && 'ghcr.io/' + github.repository_owner + '/' + github.event.repository.name + ':latest' || '' }}
-            ${{ github.ref_name == 'main' && 'ghcr.io/' + github.repository_owner + '/' + github.event.repository.name + ':stable' || (github.ref_name == 'testing' && 'ghcr.io/' + github.repository_owner + '/' + github.event.repository.name + ':testing' || 'ghcr.io/' + github.repository_owner + '/' + github.event.repository.name + ':alpha') }}
+            ${{ 
+              github.ref_name == 'main' && format('ghcr.io/{}/{}/latest', github.repository_owner, github.event.repository.name) 
+            }}
+            ${{ 
+              github.ref_name == 'main' && format('ghcr.io/{}/{}/stable', github.repository_owner, github.event.repository.name) 
+            }}
+            ${{ 
+              github.ref_name == 'testing' && format('ghcr.io/{}/{}/testing', github.repository_owner, github.event.repository.name) 
+            }}
+            ${{ 
+              (github.ref_name != 'main' && github.ref_name != 'testing') && format('ghcr.io/{}/{}/alpha', github.repository_owner, github.event.repository.name) 
+            }}
