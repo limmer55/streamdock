@@ -2,12 +2,12 @@
 ## 📺 A Web-IPTV Player
 ![screenshot](https://github.com/Limmer55/streamdock/blob/main/images/Screenshot1.png?raw=true)
 ## Features
-- 📺 **Watch from everywhere**: No client required. Simply use your browser.
-- 🔍 **Search Functionality**: Search for channels by name.
-- 🌙 **Darkmode Support**: Automatically switches between light and dark modes based on system preferences.
-- **Similar Channels**: View and navigate to similar channels based on normalized channel names. 
-- 🌍 [**iptv-org Playlists**](https://github.com/iptv-org/iptv): If you don't have an IPTV-Provider, choose a playlist for your country.
-- **Picture-In-Picture Mode**: Allows you to watch videos in a floating window
+- 📺 **Watch from everywhere**: No client required. Just use your browser.
+- 🔍 **Search Functionality**: Find channels by name.
+- 🌙 **Darkmode Support**: Automatically switches between light and dark modes based on your system preferences.
+- 📡 **Similar Channels**: View and navigate to similar channels based on normalized channel names. 
+- 🌍 [**iptv-org Playlists**](https://github.com/iptv-org/iptv): If you don’t have an IPTV provider, choose a playlist for your country.
+- 📽️ **Picture-In-Picture Mode**: Watch videos in a floating window.
 
 
 ## Installation
