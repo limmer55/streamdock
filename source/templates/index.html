@@ -472,7 +472,7 @@
             name = name.replace(/\(.*?\)/g, '');
             name = name.replace(/[^\w\s]/g, '');
 
-            var suffixes = ['HD', 'RAW', 'LOW BIT', 'AMZ', 'ᴴᴰ', 'ᴿᴬᵂ', 'ᵃᵐᶻ', '◉'];
+            var suffixes = ['HD', '4K', 'RAW', 'LOW BIT', 'AMZ', 'ᴴᴰ', 'ᴿᴬᵂ', 'ᵃᵐᶻ', '◉'];
             suffixes.forEach(function(suffix) {
                 var regex = new RegExp('\\b' + suffix + '\\b', 'g');
                 name = name.replace(regex, '');
