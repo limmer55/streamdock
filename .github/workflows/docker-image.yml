@@ -34,9 +34,9 @@ jobs:
         id: determine_tags
         run: |
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-            echo "tags=ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}:latest ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}:stable" >> $GITHUB_OUTPUT
+            echo -e "tags=ghcr.io/${{ github.repository }}:latest\nghcr.io/${{ github.repository }}:stable" >> $GITHUB_OUTPUT
           elif [ "${GITHUB_REF}" == "refs/heads/testing" ]; then
-            echo "tags=ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}:alpha" >> $GITHUB_OUTPUT
+            echo "tags=ghcr.io/${{ github.repository }}:alpha" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
