@@ -31,11 +31,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker Image
+        id: docker_build
         uses: docker/build-push-action@v4
         with:
           context: ./source
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-            ${{ github.ref_name == 'main' && 'ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:stable' || 'ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:testing' }}
-          platforms: linux/amd64,linux/arm64
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name == 'main' && 'stable' || 'alpha' }}
