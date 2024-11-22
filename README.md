@@ -9,6 +9,7 @@
 - 🌍 [**iptv-org Playlists**](https://github.com/iptv-org/iptv): If you don’t have an IPTV provider, choose a playlist for your country.
 - 📽️ **Picture-In-Picture Mode**: Watch videos in a floating window.
 
+**⚠️ It might not be very stable. Safari is currently not supported.**
 
 ## Installation
 ### Using docker
@@ -50,3 +51,10 @@ Also, "real projects" are best to learn programming!
 
 ## Support
 If you like the project, I would be happy if you left a ⭐️ in the repo.
+
+<div align="end">
+    <a href="https://github.com/limmer55/streamdock/actions/workflows/docker-image.yml">
+    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/limmer55/streamdock/docker-image.yml" />
+</a>
+
+</div>
