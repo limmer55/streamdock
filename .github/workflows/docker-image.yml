@@ -30,20 +30,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine Image Tags
-        id: determine_tags
-        run: |
-          if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-            echo "tags=ghcr.io/${{ github.repository }}:latest ghcr.io/${{ github.repository }}:stable" >> $GITHUB_OUTPUT
-          elif [ "${GITHUB_REF}" == "refs/heads/testing" ]; then
-            echo "tags=ghcr.io/${{ github.repository }}:alpha" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
-
       - name: Build and Push Docker Image
+        id: docker_build
         uses: docker/build-push-action@v4
         with:
           context: ./source
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.determine_tags.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name == 'main' && 'stable' || 'alpha' }}
