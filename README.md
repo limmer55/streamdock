@@ -23,7 +23,7 @@ docker run -d --name streamdock --network host --restart unless-stopped ghcr.io/
 version: "3.8"
 services:
   streamdock:
-    image: ghcr.io/limmer55/streamdock:latest
+    image: ghcr.io/limmer55/streamdock:stable
     container_name: streamdock
     network_mode: host
     environment:
