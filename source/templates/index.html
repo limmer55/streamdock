@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <!-- Meta and Title -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>streamdock</title>
+    <title>StreamDock</title>
+
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}"
+        sizes="32x32" type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}"
+        sizes="16x16" type="image/png">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicons/favicon.ico') }}"
+        type="image/x-icon">
 
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}" sizes="32x32"
-        type="image/png">
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}" sizes="16x16"
-        type="image/png">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicons/favicon.ico') }}" type="image/x-icon">
-
+    <!-- HLS.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-
-
+    <!-- Theme and Logo Script -->
     <script>
         function setTheme() {
             const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -43,50 +47,60 @@
 
             loadCategories();
         });
-
-        window.addEventListener('DOMContentLoaded', setTheme);
     </script>
 </head>
 
 <body>
+    <!-- Overlay to detect clicks outside the menu -->
+    <div id="overlay" class="overlay"></div>
+
+    <!-- Loader Elements -->
     <div id="loaderOverlay" class="loader-overlay"></div>
     <div id="loader" class="loader"></div>
 
-    <div class="sidebar">
-        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo"
-            class="logo">
+    <!-- Sidebar (Channel Menu) -->
+    <div id="sidebar" class="sidebar visible">
+        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}"
+            alt="StreamDock Logo" class="logo">
         <input type="text" id="searchInput" placeholder="Search Channel..." class="search-bar">
         <div id="category-container"></div>
         <div id="search-results" style="display: none;"></div>
     </div>
 
-    <div class="content">
+    <!-- Main Content -->
+    <div id="content" class="content">
         <div class="menu-button-container">
-            <button class="menu-button" onclick="toggleMenu()">☰</button>
-            <div id="dropdownMenu" class="dropdown-menu" style="display: none;">
-                <a href="/settings">Settings</a>
-            </div>
+            <!-- Toggle Sidebar Button -->
+            <button class="menu-button toggle-sidebar-button" onclick="toggleSidebar()">☰
+                <span class="menu-text">Channel Menu</span>
+            </button>
+            <img id="logo-mobile" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo" class="logo-mobile">
+
+            <!-- Settings Button -->
+            <a href="/settings" class="menu-button settings-button">⚙️</a>
         </div>
 
         <div class="main-content">
             <div id="player-section" class="player-section">
                 <h2 id="selected-channel" style="display: none;"></h2>
                 <div id="player-container">
-                    <video id="videoPlayer" controls preload="auto" playsinline crossorigin="anonymous"
-                        style="width: 100%; height: auto;">
+                    <video id="videoPlayer" controls preload="auto" playsinline crossorigin="anonymous">
                         Your browser does not support the video tag.
                     </video>
                 </div>
+                <!-- Error Message Container -->
+                <div id="error-message" style="display: none; color: red;"></div>
             </div>
-
 
             <div class="sidebar-right" style="display: none;">
                 <h3>Similar Channels</h3>
-                <div id="similar-channels" style="display: none;"></div>
+                <div id="similar-channels"></div>
+                <p id="no-similar-channels-message" style="display: none;">No similar channels found.</p>
             </div>
         </div>
     </div>
 
+    <!-- Main JavaScript -->
     <script>
         function getDefaultIconUrl() {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -173,7 +187,35 @@
                 });
         }
 
-        window.addEventListener('DOMContentLoaded', loadCategories);
+        window.addEventListener('DOMContentLoaded', function () {
+            setTheme();
+
+            const overlay = document.getElementById('overlay');
+            const sidebar = document.getElementById('sidebar');
+
+            if (window.innerWidth <= 1000) {
+                sidebar.classList.add('visible');
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+
+            loadCategories();
+            hidePlayer();
+        });
+
+        window.addEventListener('resize', function () {
+        const overlay = document.getElementById('overlay');
+        const sidebar = document.getElementById('sidebar');
+        if (window.innerWidth > 1000) {
+            overlay.classList.remove('active');
+            sidebar.classList.add('visible');
+        } else {
+            overlay.classList.remove('active');
+            sidebar.classList.remove('visible');
+        }
+        });
+
 
         function toggleChannels(category) {
             const channelsList = document.getElementById(`channels-${category}`);
@@ -238,54 +280,53 @@
 
             const selectedChannel = document.getElementById("selected-channel");
             selectedChannel.innerHTML = `
-        <img src="${validChannelIcon}" alt="Icon" class="selected-channel-icon">
-        Currently watching: ${channelName}
-    `;
+                <img src="${validChannelIcon}" alt="Icon" class="selected-channel-icon">
+                Currently watching: ${channelName}
+            `;
             selectedChannel.style.display = "flex";
 
             const video = document.getElementById('videoPlayer');
 
-            // Zerstören Sie die vorherige Hls-Instanz, falls vorhanden
+            // Destroy previous Hls instance if any
             if (currentHls) {
                 currentHls.destroy();
                 currentHls = null;
             }
 
-            // Entfernen Sie vorherige Event Listener, um Mehrfachauslösungen zu vermeiden
+            // Remove previous event listeners
             video.removeEventListener('error', handleVideoError);
 
-            // Flag, um sicherzustellen, dass die Fehlermeldung nur einmal angezeigt wird
             let errorShown = false;
+
+            function showError(message) {
+                const errorMessageDiv = document.getElementById('error-message');
+                errorMessageDiv.textContent = message;
+                errorMessageDiv.style.display = 'block';
+            }
+
+            // Hide error message when starting playback
+            const errorMessageDiv = document.getElementById('error-message');
+            errorMessageDiv.style.display = 'none';
 
             if (Hls.isSupported()) {
                 currentHls = new Hls({
                     xhrSetup: function (xhr, url) {
-                        // Optional: Set withCredentials if needed
                         xhr.withCredentials = false;
                     },
-                    subtitleDisplay: false 
+                    subtitleDisplay: false,
+                    liveDurationInfinity: true
                 });
+
                 currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                     console.log('Hls.js manifest parsed, level:', data.levels);
                     video.play();
                     hideLoader();
 
-                    // Untertitel ausblenden
+                    // Hide subtitles
                     let textTracks = video.textTracks;
                     for (let i = 0; i < textTracks.length; i++) {
                         textTracks[i].mode = 'hidden';
                     }
-                });
-
-
-                currentHls.on(Hls.Events.MEDIA_ATTACHED, function () {
-                    console.log('Hls.js media attached');
-                });
-
-                currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                    console.log('Hls.js manifest parsed, level:', data.levels);
-                    video.play();
-                    hideLoader();
                 });
 
                 currentHls.on(Hls.Events.ERROR, function (event, data) {
@@ -297,13 +338,38 @@
                             currentHls.destroy();
                             currentHls = null;
                         }
-                        alert('Error playing the stream.');
+                        let errorMessage = 'Error playing the stream.';
+                        if (data.type === 'mediaError') {
+                            if (data.details === 'fragParsingError') {
+                                if (data.error && data.error.message) {
+                                    if (data.error.message.includes('Unsupported EC-3 in M2TS found')) {
+                                        errorMessage = 'This stream uses an unsupported audio format (EC-3).';
+                                    } else {
+                                        errorMessage = `Unsupported format: ${data.error.message}`;
+                                    }
+                                } else {
+                                    errorMessage = 'Error parsing media fragment.';
+                                }
+                            } else if (data.details === 'manifestParsingError') {
+                                errorMessage = 'Error parsing manifest file.';
+                            } else if (data.details === 'manifestIncompatibleCodecsError') {
+                                errorMessage = 'Incompatible codecs in manifest.';
+                            } else {
+                                errorMessage = 'Media error occurred.';
+                            }
+                        } else if (data.type === 'networkError') {
+                            errorMessage = 'Network error occurred while fetching the stream.';
+                        } else {
+                            errorMessage = 'An unknown error occurred.';
+                        }
+                        showError(errorMessage);
                     }
                 });
 
                 currentHls.loadSource(streamUrl);
                 currentHls.attachMedia(video);
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS playback (Safari)
                 video.src = streamUrl;
                 video.addEventListener('loadedmetadata', function () {
                     video.play();
@@ -312,25 +378,22 @@
                 video.addEventListener('error', handleVideoError);
             } else {
                 hideLoader();
-                alert('HLS is not supported in your browser.');
+                showError('HLS is not supported in your browser.');
             }
 
             const baseName = normalizeChannelName(channelName);
             const similarChannels = window.baseNameToChannels[baseName] || [];
             displaySimilarChannels(similarChannels, channelName);
 
-            // Definieren Sie die Fehlerbehandlungsfunktion innerhalb der Funktion
             function handleVideoError() {
                 hideLoader();
                 if (!errorShown) {
                     errorShown = true;
-                    alert('Error playing the stream.');
+                    showError('Error playing the stream.');
                 }
             }
         }
 
-
-        // Stellen Sie sicher, dass die Hls-Instanz beim Verlassen der Seite zerstört wird
         window.addEventListener('beforeunload', function () {
             if (currentHls) {
                 currentHls.destroy();
@@ -340,47 +403,81 @@
         function displaySimilarChannels(similarChannels, currentChannelName) {
             var similarChannelsDiv = document.getElementById('similar-channels');
             var sidebarRightDiv = document.querySelector('.sidebar-right');
+            var noSimilarChannelsMessage = document.getElementById('no-similar-channels-message');
 
             similarChannelsDiv.innerHTML = '';
 
             var filteredChannels = similarChannels.filter(channel => channel.name !== currentChannelName);
 
-            if (filteredChannels.length === 0) {
-                similarChannelsDiv.style.display = 'none';
-                sidebarRightDiv.style.display = 'none';
-                return;
-            }
-
-            similarChannelsDiv.style.display = 'block';
+            // Display the sidebar-right div when a channel is selected
             sidebarRightDiv.style.display = 'block';
 
-            filteredChannels.forEach(function (channel) {
-                var channelP = document.createElement('p');
-                channelP.classList.add('channel-name');
-                channelP.setAttribute('data-channel-name', channel.name);
-                channelP.setAttribute('data-stream-url', channel.url);
+            if (filteredChannels.length === 0) {
+                // Display message when no similar channels are found
+                noSimilarChannelsMessage.style.display = 'block';
+                similarChannelsDiv.style.display = 'none';
+            } else {
+                noSimilarChannelsMessage.style.display = 'none';
+                similarChannelsDiv.style.display = 'block';
 
-                const iconUrl = channel.icon
-                    ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
-                    : getDefaultIconUrl();
+                filteredChannels.forEach(function (channel) {
+                    var channelP = document.createElement('p');
+                    channelP.classList.add('channel-name');
+                    channelP.setAttribute('data-channel-name', channel.name);
+                    channelP.setAttribute('data-stream-url', channel.url);
 
-                var iconImg = document.createElement('img');
-                iconImg.src = iconUrl;
-                iconImg.alt = "Icon";
-                iconImg.classList.add('channel-icon');
+                    const iconUrl = channel.icon
+                        ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
+                        : getDefaultIconUrl();
 
-                iconImg.onerror = function () {
-                    this.onerror = null;
-                    this.src = getDefaultIconUrl();
-                };
+                    var iconImg = document.createElement('img');
+                    iconImg.src = iconUrl;
+                    iconImg.alt = "Icon";
+                    iconImg.classList.add('channel-icon');
 
-                channelP.appendChild(iconImg);
-                channelP.appendChild(document.createTextNode(channel.name));
+                    iconImg.onerror = function () {
+                        this.onerror = null;
+                        this.src = getDefaultIconUrl();
+                    };
 
-                similarChannelsDiv.appendChild(channelP);
-            });
+                    channelP.appendChild(iconImg);
+                    channelP.appendChild(document.createTextNode(channel.name));
+
+                    similarChannelsDiv.appendChild(channelP);
+                });
+            }
         }
 
+        // Function to Toggle the Sidebar with Animation
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+
+            sidebar.classList.toggle('visible');
+            overlay.classList.toggle('active');
+        }
+
+        // Close Sidebar When Clicking on the Overlay
+        document.getElementById('overlay').addEventListener('click', function () {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.remove('visible');
+            overlay.classList.remove('active');
+        });
+
+        // Ensure the Overlay is Hidden on Larger Screens
+        window.addEventListener('resize', function () {
+            const overlay = document.getElementById('overlay');
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 1000) {
+                overlay.classList.remove('active');
+                sidebar.classList.add('visible');
+            } else {
+                overlay.classList.add('active');
+            }
+        });
+
+        // Modify the handleChannelClick Function to Hide the Sidebar on Mobile Devices
         function handleChannelClick(event) {
             const channelElement = event.target.closest(".channel-name");
             if (channelElement) {
@@ -388,8 +485,6 @@
                 const channelName = channelElement.getAttribute("data-channel-name");
                 const channelIcon = channelElement.getAttribute("data-channel-icon");
                 if (streamUrl) {
-                    
-
                     fetch('/get_stream', {
                         method: 'POST',
                         headers: {
@@ -411,11 +506,20 @@
                                 playChannel(data.stream_url, channelName, channelIcon);
                                 document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
                                 channelElement.classList.add('selected');
-                            } else if (data.error) {                                
+
+                                // Hide the sidebar on mobile devices after selecting a channel
+                                const sidebar = document.getElementById('sidebar');
+                                const overlay = document.getElementById('overlay');
+                                if (window.innerWidth <= 1000) {
+                                    sidebar.classList.remove('visible');
+                                    overlay.classList.remove('active');
+                                }
+
+                            } else if (data.error) {
                                 alert(`Error: ${data.error}`);
                             }
                         })
-                        .catch(error => {                            
+                        .catch(error => {
                             console.error('Error:', error);
                             alert(error.message);
                         });
@@ -425,28 +529,6 @@
 
         document.addEventListener("click", handleChannelClick);
         document.addEventListener("touchstart", handleChannelClick);
-
-        function toggleMenu() {
-            const dropdown = document.getElementById("dropdownMenu");
-            if (dropdown.style.display === "none" || dropdown.style.display === "") {
-                dropdown.style.display = "block";
-            } else {
-                dropdown.style.display = "none";
-            }
-        }
-
-        window.onclick = function (event) {
-            if (!event.target.matches('.menu-button')) {
-                const dropdown = document.getElementById("dropdownMenu");
-                if (dropdown.style.display === "block") {
-                    dropdown.style.display = "none";
-                }
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', function () {
-            hidePlayer();
-        });
 
         var allChannels = [];
         var baseNameToChannels = {};
@@ -479,10 +561,11 @@
 
             var sidebarRightDiv = document.querySelector('.sidebar-right');
             sidebarRightDiv.style.display = 'none';
+
+            var noSimilarChannelsMessage = document.getElementById('no-similar-channels-message');
+            noSimilarChannelsMessage.style.display = 'none';
         }
     </script>
-
-
 </body>
 
 </html>
