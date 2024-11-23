@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
-    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
 
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}" sizes="32x32" type="image/png">
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}" sizes="16x16" type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}" sizes="32x32"
+        type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}" sizes="16x16"
+        type="image/png">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicons/favicon.ico') }}" type="image/x-icon">
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 
 
@@ -37,24 +40,26 @@
             const newColorScheme = e.matches ? "dark" : "light";
             document.documentElement.setAttribute("data-theme", newColorScheme);
             updateLogo(newColorScheme);
-            
+
             loadCategories();
         });
 
         window.addEventListener('DOMContentLoaded', setTheme);
     </script>
 </head>
+
 <body>
     <div id="loaderOverlay" class="loader-overlay"></div>
     <div id="loader" class="loader"></div>
 
     <div class="sidebar">
-        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo" class="logo">
+        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo"
+            class="logo">
         <input type="text" id="searchInput" placeholder="Search Channel..." class="search-bar">
         <div id="category-container"></div>
         <div id="search-results" style="display: none;"></div>
     </div>
-    
+
     <div class="content">
         <div class="menu-button-container">
             <button class="menu-button" onclick="toggleMenu()">☰</button>
@@ -67,13 +72,13 @@
             <div id="player-section" class="player-section">
                 <h2 id="selected-channel" style="display: none;"></h2>
                 <div id="player-container">
-                    <video id="videoPlayer" class="video-js vjs-default-skin" controls preload="auto" playsinline crossorigin="anonymous">
-                        <source src="" type="application/x-mpegURL">
+                    <video id="videoPlayer" controls preload="auto" playsinline crossorigin="anonymous"
+                        style="width: 100%; height: auto;">
                         Your browser does not support the video tag.
                     </video>
                 </div>
             </div>
-            
+
 
             <div class="sidebar-right" style="display: none;">
                 <h3>Similar Channels</h3>
@@ -81,15 +86,12 @@
             </div>
         </div>
     </div>
-    
-    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-    <script src="https://unpkg.com/@videojs/http-streaming@latest/dist/videojs-http-streaming.min.js"></script>
 
     <script>
         function getDefaultIconUrl() {
             const currentTheme = document.documentElement.getAttribute("data-theme");
-            return currentTheme === 'dark' 
-                ? "{{ url_for('static', filename='default-logo_dark.png') }}" 
+            return currentTheme === 'dark'
+                ? "{{ url_for('static', filename='default-logo_dark.png') }}"
                 : "{{ url_for('static', filename='default-logo_light.png') }}";
         }
 
@@ -127,7 +129,7 @@
                             channelP.setAttribute('data-channel-name', channel.name);
                             channelP.setAttribute('data-stream-url', channel.url);
 
-                            const iconUrl = channel.icon 
+                            const iconUrl = channel.icon
                                 ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
                                 : defaultIconUrl;
 
@@ -138,9 +140,8 @@
                             iconImg.alt = "Icon";
                             iconImg.classList.add('channel-icon');
 
-                            
-                            iconImg.onerror = function() {
-                                this.onerror = null; 
+                            iconImg.onerror = function () {
+                                this.onerror = null;
                                 this.src = defaultIconUrl;
                             };
 
@@ -172,7 +173,6 @@
                 });
         }
 
-
         window.addEventListener('DOMContentLoaded', loadCategories);
 
         function toggleChannels(category) {
@@ -181,7 +181,7 @@
             channelsList.style.display = isVisible ? "none" : "block";
         }
 
-        document.getElementById("searchInput").addEventListener("input", function() {
+        document.getElementById("searchInput").addEventListener("input", function () {
             const searchValue = this.value.toLowerCase();
             const categoryContainer = document.getElementById("category-container");
             const searchResultsContainer = document.getElementById("search-results");
@@ -201,10 +201,9 @@
                         const result = channel.cloneNode(true);
                         result.classList.remove('selected');
 
-                        
                         const img = result.querySelector('img.channel-icon');
                         if (img) {
-                            img.onerror = function() {
+                            img.onerror = function () {
                                 this.onerror = null;
                                 this.src = getDefaultIconUrl();
                             };
@@ -216,7 +215,6 @@
             }
         });
 
-
         function showLoader() {
             document.getElementById("loaderOverlay").classList.add("active");
             document.getElementById("loader").classList.add("active");
@@ -227,161 +225,155 @@
             document.getElementById("loader").classList.remove("active");
         }
 
-        function playChannel(streamUrl, channelName, channelIcon) { 
-        console.log('Playing Channel:', channelName, 'Stream URL:', streamUrl);
-        const playerContainer = document.getElementById("player-container");
-        playerContainer.style.display = "block";
+        let currentHls = null;
 
-        const defaultIcon = getDefaultIconUrl();
+        function playChannel(streamUrl, channelName, channelIcon) {
+            console.log('Playing Channel:', channelName, 'Stream URL:', streamUrl);
+            const playerContainer = document.getElementById("player-container");
+            playerContainer.style.display = "block";
 
-        const validChannelIcon = channelIcon && channelIcon !== 'null' ? channelIcon : defaultIcon;
+            const defaultIcon = getDefaultIconUrl();
 
-        const selectedChannel = document.getElementById("selected-channel");
-        selectedChannel.innerHTML = `
-            <img src="${validChannelIcon}" alt="Icon" class="selected-channel-icon">
-            Currently watching: ${channelName}
-        `;
-        selectedChannel.style.display = "flex";
+            const validChannelIcon = channelIcon && channelIcon !== 'null' ? channelIcon : defaultIcon;
 
-        if (window.player) {
-            window.player.src({
-                src: streamUrl,
-                type: 'application/x-mpegURL',
-                withCredentials: false,
-                crossOrigin: 'anonymous'
-            });
+            const selectedChannel = document.getElementById("selected-channel");
+            selectedChannel.innerHTML = `
+        <img src="${validChannelIcon}" alt="Icon" class="selected-channel-icon">
+        Currently watching: ${channelName}
+    `;
+            selectedChannel.style.display = "flex";
 
-            window.player.on('loadedmetadata', function() {
-                var tracks = window.player.textTracks();
-                for (var i = 0; i < tracks.length; i++) {
-                    tracks[i].mode = 'hidden';
-                }
+            const video = document.getElementById('videoPlayer');
 
-                
-                const videoElement = window.player.tech().el();
-                const nativeWidth = videoElement.videoWidth;
-                const nativeHeight = videoElement.videoHeight;
+            // Zerstören Sie die vorherige Hls-Instanz, falls vorhanden
+            if (currentHls) {
+                currentHls.destroy();
+                currentHls = null;
+            }
 
-                console.log(`Native Resolution: ${nativeWidth}x${nativeHeight}`);
+            // Entfernen Sie vorherige Event Listener, um Mehrfachauslösungen zu vermeiden
+            video.removeEventListener('error', handleVideoError);
 
-                
-                adjustVideoContainer(nativeWidth, nativeHeight);
-            });
+            // Flag, um sicherzustellen, dass die Fehlermeldung nur einmal angezeigt wird
+            let errorShown = false;
 
-            window.player.play().then(() => {
-                console.log('Playback started');
-            }).catch(error => {
-                console.error('Playback error:', error);
+            if (Hls.isSupported()) {
+                currentHls = new Hls({
+                    xhrSetup: function (xhr, url) {
+                        // Optional: Set withCredentials if needed
+                        xhr.withCredentials = false;
+                    }
+                });
+
+                currentHls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                    console.log('Hls.js media attached');
+                });
+
+                currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    console.log('Hls.js manifest parsed, level:', data.levels);
+                    video.play();
+                    hideLoader();
+                });
+
+                currentHls.on(Hls.Events.ERROR, function (event, data) {
+                    console.error('hls.js error:', data);
+                    hideLoader();
+                    if (!errorShown) {
+                        errorShown = true;
+                        if (currentHls) {
+                            currentHls.destroy();
+                            currentHls = null;
+                        }
+                        alert('Error playing the stream.');
+                    }
+                });
+
+                currentHls.loadSource(streamUrl);
+                currentHls.attachMedia(video);
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', function () {
+                    video.play();
+                    hideLoader();
+                });
+                video.addEventListener('error', handleVideoError);
+            } else {
                 hideLoader();
-                alert('Playback could not be started.');
-            });
-        } else {
-            console.error("Video.js Player is not initialized.");
-            hideLoader();
+                alert('HLS is not supported in your browser.');
+            }
+
+            const baseName = normalizeChannelName(channelName);
+            const similarChannels = window.baseNameToChannels[baseName] || [];
+            displaySimilarChannels(similarChannels, channelName);
+
+            // Definieren Sie die Fehlerbehandlungsfunktion innerhalb der Funktion
+            function handleVideoError() {
+                hideLoader();
+                if (!errorShown) {
+                    errorShown = true;
+                    alert('Error playing the stream.');
+                }
+            }
         }
 
-        const baseName = normalizeChannelName(channelName);
-        const similarChannels = window.baseNameToChannels[baseName] || [];
-        displaySimilarChannels(similarChannels, channelName);
 
-        hideLoader();
-    }
-
-    function adjustVideoContainer(nativeWidth, nativeHeight) {
-        const playerContainer = document.getElementById("player-container");
-        const videoElement = document.getElementById("videoPlayer");
-
-        
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight * 0.8; 
-
-        let displayWidth = nativeWidth;
-        let displayHeight = nativeHeight;
-
-        
-        if (nativeWidth > windowWidth) {
-            const ratio = windowWidth / nativeWidth;
-            displayWidth = windowWidth;
-            displayHeight = nativeHeight * ratio;
-        }
-
-        if (displayHeight > windowHeight) {
-            const ratio = windowHeight / displayHeight;
-            displayHeight = windowHeight;
-            displayWidth = displayWidth * ratio;
-        }
-
-        
-        playerContainer.style.width = `${displayWidth}px`;
-        playerContainer.style.height = `${displayHeight}px`;
-
-        
-        videoElement.style.width = "100%";
-        videoElement.style.height = "100%";
-    }
-
-   
-    window.addEventListener('resize', function() {
-        if (window.player && window.player.tech() && window.player.tech().el()) {
-            const videoElement = window.player.tech().el();
-            const nativeWidth = videoElement.videoWidth;
-            const nativeHeight = videoElement.videoHeight;
-            adjustVideoContainer(nativeWidth, nativeHeight);
-        }
-    });
-
-    function displaySimilarChannels(similarChannels, currentChannelName) {
-        var similarChannelsDiv = document.getElementById('similar-channels');
-        var sidebarRightDiv = document.querySelector('.sidebar-right');
-
-        similarChannelsDiv.innerHTML = '';
-
-        var filteredChannels = similarChannels.filter(channel => channel.name !== currentChannelName);
-
-        if (filteredChannels.length === 0) {
-            similarChannelsDiv.style.display = 'none';
-            sidebarRightDiv.style.display = 'none';
-            return;
-        }
-
-        similarChannelsDiv.style.display = 'block';
-        sidebarRightDiv.style.display = 'block';
-
-        filteredChannels.forEach(function(channel) {
-            var channelP = document.createElement('p');
-            channelP.classList.add('channel-name');
-            channelP.setAttribute('data-channel-name', channel.name);
-            channelP.setAttribute('data-stream-url', channel.url);
-
-            const iconUrl = channel.icon 
-                ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
-                : getDefaultIconUrl();
-
-            var iconImg = document.createElement('img');
-            iconImg.src = iconUrl;
-            iconImg.alt = "Icon";
-            iconImg.classList.add('channel-icon');
-
-            
-            iconImg.onerror = function() {
-                this.onerror = null; 
-                this.src = getDefaultIconUrl();
-            };
-
-            channelP.appendChild(iconImg);
-            channelP.appendChild(document.createTextNode(channel.name));
-
-            similarChannelsDiv.appendChild(channelP);
+        // Stellen Sie sicher, dass die Hls-Instanz beim Verlassen der Seite zerstört wird
+        window.addEventListener('beforeunload', function () {
+            if (currentHls) {
+                currentHls.destroy();
+            }
         });
-    }
 
+        function displaySimilarChannels(similarChannels, currentChannelName) {
+            var similarChannelsDiv = document.getElementById('similar-channels');
+            var sidebarRightDiv = document.querySelector('.sidebar-right');
+
+            similarChannelsDiv.innerHTML = '';
+
+            var filteredChannels = similarChannels.filter(channel => channel.name !== currentChannelName);
+
+            if (filteredChannels.length === 0) {
+                similarChannelsDiv.style.display = 'none';
+                sidebarRightDiv.style.display = 'none';
+                return;
+            }
+
+            similarChannelsDiv.style.display = 'block';
+            sidebarRightDiv.style.display = 'block';
+
+            filteredChannels.forEach(function (channel) {
+                var channelP = document.createElement('p');
+                channelP.classList.add('channel-name');
+                channelP.setAttribute('data-channel-name', channel.name);
+                channelP.setAttribute('data-stream-url', channel.url);
+
+                const iconUrl = channel.icon
+                    ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
+                    : getDefaultIconUrl();
+
+                var iconImg = document.createElement('img');
+                iconImg.src = iconUrl;
+                iconImg.alt = "Icon";
+                iconImg.classList.add('channel-icon');
+
+                iconImg.onerror = function () {
+                    this.onerror = null;
+                    this.src = getDefaultIconUrl();
+                };
+
+                channelP.appendChild(iconImg);
+                channelP.appendChild(document.createTextNode(channel.name));
+
+                similarChannelsDiv.appendChild(channelP);
+            });
+        }
 
         function handleChannelClick(event) {
             const channelElement = event.target.closest(".channel-name");
             if (channelElement) {
                 const streamUrl = channelElement.getAttribute("data-stream-url");
-                const channelName = channelElement.getAttribute("data-channel-name"); 
-                const channelIcon = channelElement.getAttribute("data-channel-icon"); 
+                const channelName = channelElement.getAttribute("data-channel-name");
+                const channelIcon = channelElement.getAttribute("data-channel-icon");
                 if (streamUrl) {
                     showLoader();
 
@@ -392,30 +384,30 @@
                         },
                         body: JSON.stringify({ stream_url: streamUrl })
                     })
-                    .then(response => {
-                        console.log('Response Status:', response.status);
-                        if (response.status === 200) {
-                            return response.json();
-                        } else {
-                            return response.json().then(data => { throw new Error(data.error || 'Unknown error'); });
-                        }
-                    })
-                    .then(data => {
-                        console.log('Stream Data:', data);
-                        if (data.stream_url) {
-                            playChannel(data.stream_url, channelName, channelIcon);
-                            document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
-                            channelElement.classList.add('selected');
-                        } else if (data.error) {
+                        .then(response => {
+                            console.log('Response Status:', response.status);
+                            if (response.status === 200) {
+                                return response.json();
+                            } else {
+                                return response.json().then(data => { throw new Error(data.error || 'Unknown error'); });
+                            }
+                        })
+                        .then(data => {
+                            console.log('Stream Data:', data);
+                            if (data.stream_url) {
+                                playChannel(data.stream_url, channelName, channelIcon);
+                                document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
+                                channelElement.classList.add('selected');
+                            } else if (data.error) {
+                                hideLoader();
+                                alert(`Error: ${data.error}`);
+                            }
+                        })
+                        .catch(error => {
                             hideLoader();
-                            alert(`Error: ${data.error}`);
-                        }
-                    })
-                    .catch(error => {
-                        hideLoader();
-                        console.error('Error:', error);
-                        alert(error.message);
-                    });
+                            console.error('Error:', error);
+                            alert(error.message);
+                        });
                 }
             }
         }
@@ -432,7 +424,7 @@
             }
         }
 
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             if (!event.target.matches('.menu-button')) {
                 const dropdown = document.getElementById("dropdownMenu");
                 if (dropdown.style.display === "block") {
@@ -441,26 +433,7 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', function() {
-            window.player = videojs('videoPlayer', {
-                techOrder: ["html5"],
-                sources: [],
-                fluid: true,
-                playsinline: true,
-                autoplay: false,
-                controls: true,
-                crossOrigin: 'anonymous',
-                html5: {
-                    hls: {
-                        withCredentials: false
-                    },
-                    vhs: {
-                        withCredentials: false
-                    }
-                }
-            }, function() {
-                console.log('Video.js Player is ready');
-            });
+        window.addEventListener('DOMContentLoaded', function () {
             hidePlayer();
         });
 
@@ -473,7 +446,7 @@
             name = name.replace(/[^\w\s]/g, '');
 
             var suffixes = ['HD', '4K', 'RAW', 'LOW BIT', 'AMZ', 'ᴴᴰ', 'ᴿᴬᵂ', 'ᵃᵐᶻ', '◉'];
-            suffixes.forEach(function(suffix) {
+            suffixes.forEach(function (suffix) {
                 var regex = new RegExp('\\b' + suffix + '\\b', 'g');
                 name = name.replace(regex, '');
             });
@@ -497,6 +470,8 @@
             sidebarRightDiv.style.display = 'none';
         }
     </script>
-    
+
+
 </body>
+
 </html>

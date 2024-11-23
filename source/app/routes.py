@@ -1,10 +1,12 @@
-from flask import render_template, Blueprint, jsonify, request, current_app, send_file
+from flask import render_template, Blueprint, jsonify, request, current_app, send_file, Response
 from .m3u_parser import parse_m3u_channels_and_categories
 import os
 import logging
 import json
 import requests
 from io import BytesIO
+import urllib.parse
+import re
 
 
 main_bp = Blueprint('main', __name__)
@@ -12,6 +14,106 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 def index():
     return render_template('index.html')
+
+from flask import Response
+import m3u8
+import urllib.parse
+
+@main_bp.route('/proxy_stream')
+def proxy_stream():
+    stream_url = request.args.get('url')
+    if not stream_url:
+        return jsonify({"error": "No stream URL provided"}), 400
+
+    try:
+        # Abrufen der Original-Stream-URL
+        response = requests.get(stream_url, stream=True, timeout=10)
+        response.raise_for_status()
+
+        content_type = response.headers.get('Content-Type', '')
+        logging.info(f"Proxying URL: {stream_url}")
+        logging.info(f"Original Content-Type: {content_type}")
+
+        # Überprüfen, ob es sich um eine M3U8-Playlist handelt
+        if 'application/vnd.apple.mpegurl' in content_type or stream_url.endswith('.m3u8'):
+            playlist_content = response.text
+
+            logging.debug("Original Playlist Content:")
+            logging.debug(playlist_content)
+
+            # Parse der Playlist
+            parsed_playlist = m3u8.loads(playlist_content)
+
+            # Basis-URL für relative Pfade
+            base_url = response.url  # Berücksichtigt Weiterleitungen
+
+            # Funktion zum Umschreiben von URIs
+            def rewrite_uri(uri):
+                if not uri or uri.startswith('#'):
+                    return uri  # Kommentare und leere Zeilen unverändert lassen
+                if uri.startswith('http://') or uri.startswith('https://'):
+                    absolute_uri = uri
+                else:
+                    absolute_uri = urllib.parse.urljoin(base_url, uri)
+                proxied_uri = f"/proxy_stream?url={urllib.parse.quote(absolute_uri, safe='')}"
+                return proxied_uri
+
+            # Durchgehen aller Segmente und Playlists
+            for segment in parsed_playlist.segments:
+                old_uri = segment.uri
+                new_uri = rewrite_uri(segment.uri)
+                segment.uri = new_uri
+                logging.debug(f"Rewriting segment URI: {old_uri} -> {new_uri}")
+
+            for playlist in parsed_playlist.playlists:
+                old_uri = playlist.uri
+                new_uri = rewrite_uri(playlist.uri)
+                playlist.uri = new_uri
+                logging.debug(f"Rewriting playlist URI: {old_uri} -> {new_uri}")
+
+            # **Hier fügen Sie die neue Schleife hinzu**
+            # Durchgehen aller Media-Einträge
+            for media in parsed_playlist.media:
+                if media.uri:
+                    old_uri = media.uri
+                    new_uri = rewrite_uri(media.uri)
+                    media.uri = new_uri
+                    logging.debug(f"Rewriting media URI: {old_uri} -> {new_uri}")
+
+            # Serialisieren der modifizierten Playlist
+            modified_playlist = parsed_playlist.dumps()
+
+            logging.debug("Modified Playlist Content:")
+            logging.debug(modified_playlist)
+
+            return Response(
+                modified_playlist,
+                content_type=content_type
+            )
+        else:
+            # Bestimmen des MIME-Typs für verschiedene Medien
+            if stream_url.endswith('.ts'):
+                content_type = 'video/MP2T'
+            elif stream_url.endswith('.aac'):
+                content_type = 'audio/aac'
+            elif stream_url.endswith('.mp3'):
+                content_type = 'audio/mpeg'
+            # Fügen Sie weitere Dateiendungen und MIME-Typen nach Bedarf hinzu
+            else:
+                content_type = 'application/octet-stream'  # Fallback
+
+            logging.debug(f"Serving non-playlist content with Content-Type: {content_type}")
+
+            return Response(
+                response.iter_content(chunk_size=8192),
+                content_type=content_type
+            )
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error proxying stream: {e}")
+        return jsonify({"error": "Failed to proxy the stream."}), 500
+
+
+
 
 @main_bp.route('/api/categories')
 def get_categories():
@@ -52,7 +154,7 @@ def proxy_image():
         return send_file(BytesIO(response.content), mimetype=content_type)
     except requests.exceptions.RequestException as e:
         logging.error(f"Error proxying image: {e}")
-        # Fallback auf ein Default-Image, wenn das Proxying fehlschlägt
+        
         default_icon_path = os.path.join(current_app.static_folder, 'default-logo_light.png')
         if os.path.exists(default_icon_path):
             return send_file(default_icon_path, mimetype='image/png')
@@ -64,7 +166,7 @@ def proxy_image():
 @main_bp.route('/get_stream', methods=['POST'])
 def get_stream():
     """
-    Endpoint to get the stream URL for a given stream URL.
+    Endpoint to get the proxied stream URL for a given stream URL.
     Expects JSON data with 'stream_url'.
     """
     data = request.get_json()
@@ -73,8 +175,10 @@ def get_stream():
     if not stream_url:
         return jsonify({'error': 'No stream URL provided'}), 400
 
+    proxied_url = f"{request.host_url}proxy_stream?url={requests.utils.quote(stream_url, safe='')}"
     
-    return jsonify({'stream_url': stream_url}), 200
+    return jsonify({'stream_url': proxied_url}), 200
+
 
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
