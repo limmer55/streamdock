@@ -51,34 +51,46 @@ def proxy_stream():
             def rewrite_uri(uri):
                 if not uri or uri.startswith('#'):
                     return uri  # Kommentare und leere Zeilen unverändert lassen
+
+                # Überprüfen, ob die URI bereits über den Proxy läuft
+                parsed_uri = urllib.parse.urlparse(uri)
+                if parsed_uri.netloc == request.host and parsed_uri.path.startswith('/proxy_stream'):
+                    logging.debug(f"URI already proxied: {uri}")
+                    return uri  # Bereits geproxied, unverändert zurückgeben
+
+                # Basis-URL für relative Pfade
+                base_parsed = urllib.parse.urlparse(base_url)
+                base_domain = f"{base_parsed.scheme}://{base_parsed.netloc}"
+
                 if uri.startswith('http://') or uri.startswith('https://'):
                     absolute_uri = uri
+                elif uri.startswith('/'):
+                    # URIs, die mit '/' beginnen, relativ zum Domain-Root
+                    absolute_uri = urllib.parse.urljoin(base_domain, uri)
                 else:
+                    # Relative URIs ohne führendes '/'
                     absolute_uri = urllib.parse.urljoin(base_url, uri)
+
                 proxied_uri = f"/proxy_stream?url={urllib.parse.quote(absolute_uri, safe='')}"
+                logging.debug(f"Rewriting URI: {uri} -> {proxied_uri}")
                 return proxied_uri
 
-            # Durchgehen aller Segmente und Playlists
+            # Durchgehen aller Segmente, Playlists und Media-Einträge
             for segment in parsed_playlist.segments:
                 old_uri = segment.uri
-                new_uri = rewrite_uri(segment.uri)
-                segment.uri = new_uri
-                logging.debug(f"Rewriting segment URI: {old_uri} -> {new_uri}")
+                segment.uri = rewrite_uri(segment.uri)
+                logging.debug(f"Rewriting segment URI: {old_uri} -> {segment.uri}")
 
             for playlist in parsed_playlist.playlists:
                 old_uri = playlist.uri
-                new_uri = rewrite_uri(playlist.uri)
-                playlist.uri = new_uri
-                logging.debug(f"Rewriting playlist URI: {old_uri} -> {new_uri}")
+                playlist.uri = rewrite_uri(playlist.uri)
+                logging.debug(f"Rewriting playlist URI: {old_uri} -> {playlist.uri}")
 
-            # **Hier fügen Sie die neue Schleife hinzu**
-            # Durchgehen aller Media-Einträge
             for media in parsed_playlist.media:
                 if media.uri:
                     old_uri = media.uri
-                    new_uri = rewrite_uri(media.uri)
-                    media.uri = new_uri
-                    logging.debug(f"Rewriting media URI: {old_uri} -> {new_uri}")
+                    media.uri = rewrite_uri(media.uri)
+                    logging.debug(f"Rewriting media URI: {old_uri} -> {media.uri}")
 
             # Serialisieren der modifizierten Playlist
             modified_playlist = parsed_playlist.dumps()
@@ -111,6 +123,7 @@ def proxy_stream():
     except requests.exceptions.RequestException as e:
         logging.error(f"Error proxying stream: {e}")
         return jsonify({"error": "Failed to proxy the stream."}), 500
+
 
 
 

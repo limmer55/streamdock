@@ -262,8 +262,21 @@
                     xhrSetup: function (xhr, url) {
                         // Optional: Set withCredentials if needed
                         xhr.withCredentials = false;
+                    },
+                    subtitleDisplay: false 
+                });
+                currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    console.log('Hls.js manifest parsed, level:', data.levels);
+                    video.play();
+                    hideLoader();
+
+                    // Untertitel ausblenden
+                    let textTracks = video.textTracks;
+                    for (let i = 0; i < textTracks.length; i++) {
+                        textTracks[i].mode = 'hidden';
                     }
                 });
+
 
                 currentHls.on(Hls.Events.MEDIA_ATTACHED, function () {
                     console.log('Hls.js media attached');
@@ -375,7 +388,7 @@
                 const channelName = channelElement.getAttribute("data-channel-name");
                 const channelIcon = channelElement.getAttribute("data-channel-icon");
                 if (streamUrl) {
-                    showLoader();
+                    
 
                     fetch('/get_stream', {
                         method: 'POST',
@@ -398,13 +411,11 @@
                                 playChannel(data.stream_url, channelName, channelIcon);
                                 document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
                                 channelElement.classList.add('selected');
-                            } else if (data.error) {
-                                hideLoader();
+                            } else if (data.error) {                                
                                 alert(`Error: ${data.error}`);
                             }
                         })
-                        .catch(error => {
-                            hideLoader();
+                        .catch(error => {                            
                             console.error('Error:', error);
                             alert(error.message);
                         });
