@@ -1,4 +1,9 @@
-from flask import render_template, Blueprint, jsonify, request, current_app, send_file, Response
+import hashlib
+import subprocess
+import threading
+import time
+
+from flask import render_template, Blueprint, jsonify, request, current_app, send_file, Response, send_from_directory
 from .m3u_parser import parse_m3u_channels_and_categories
 import os
 import logging
@@ -8,125 +13,108 @@ from io import BytesIO
 import urllib.parse
 import re
 
+import m3u8
 
 main_bp = Blueprint('main', __name__)
+
+# Verwenden Sie den Cache-Pfad aus der App-Konfiguration
+def get_cache_dir():
+    return current_app.config.get('STREAM_CACHE_PATH', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache'))
+
+# Dictionary to keep track of ongoing transcodings
+transcoding_tasks = {}
 
 @main_bp.route('/')
 def index():
     return render_template('index.html')
 
-from flask import Response
-import m3u8
-import urllib.parse
 
-@main_bp.route('/proxy_stream')
-def proxy_stream():
-    stream_url = request.args.get('url')
-    if not stream_url:
-        return jsonify({"error": "No stream URL provided"}), 400
+def transcode_stream(original_url, output_dir):
+    """
+    Transcode the original stream to HLS using ffmpeg.
+    """
+    playlist_path = os.path.join(output_dir, 'playlist.m3u8')
+    segment_path = os.path.join(output_dir, 'segment_%03d.ts')
+
+    # Stelle sicher, dass das Ausgabeverzeichnis existiert
+    os.makedirs(output_dir, exist_ok=True)
+
+    # ffmpeg command to transcode to HLS mit beschränkter Anzahl von Segmente
+    ffmpeg_command = [
+        'ffmpeg',
+        '-i', original_url,
+        '-c:v', 'libx264',
+        '-c:a', 'aac',
+        '-ac', '2',  # Force stereo audio
+        '-strict', 'experimental',
+        '-f', 'hls',
+        '-hls_time', '4',
+        '-hls_playlist_type', 'event',
+        '-hls_list_size', '5',            # Beschränkt die Playlist auf 5 Segmente
+        '-hls_flags', 'delete_segments',   # Löscht ältere Segmente, um die Anzahl zu begrenzen
+        '-hls_segment_filename', segment_path,
+        playlist_path
+    ]
+        
+    
+    
 
     try:
-        # Abrufen der Original-Stream-URL
-        response = requests.get(stream_url, stream=True, timeout=10)
-        response.raise_for_status()
+        logging.info(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
+        process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        content_type = response.headers.get('Content-Type', '')
-        logging.info(f"Proxying URL: {stream_url}")
-        logging.info(f"Original Content-Type: {content_type}")
+        # Stream ffmpeg output in Echtzeit
+        while True:
+            output = process.stdout.readline()
+            error = process.stderr.readline()
+            if output:
+                logging.debug(f"ffmpeg stdout: {output.strip()}")
+            if error:
+                logging.debug(f"ffmpeg stderr: {error.strip()}")
+            if output == '' and process.poll() is not None:
+                break
 
-        # Überprüfen, ob es sich um eine M3U8-Playlist handelt
-        if 'application/vnd.apple.mpegurl' in content_type or stream_url.endswith('.m3u8'):
-            playlist_content = response.text
-
-            logging.debug("Original Playlist Content:")
-            logging.debug(playlist_content)
-
-            # Parse der Playlist
-            parsed_playlist = m3u8.loads(playlist_content)
-
-            # Basis-URL für relative Pfade
-            base_url = response.url  # Berücksichtigt Weiterleitungen
-
-            # Funktion zum Umschreiben von URIs
-            def rewrite_uri(uri):
-                if not uri or uri.startswith('#'):
-                    return uri  # Kommentare und leere Zeilen unverändert lassen
-
-                # Überprüfen, ob die URI bereits über den Proxy läuft
-                parsed_uri = urllib.parse.urlparse(uri)
-                if parsed_uri.netloc == request.host and parsed_uri.path.startswith('/proxy_stream'):
-                    logging.debug(f"URI already proxied: {uri}")
-                    return uri  # Bereits geproxied, unverändert zurückgeben
-
-                # Basis-URL für relative Pfade
-                base_parsed = urllib.parse.urlparse(base_url)
-                base_domain = f"{base_parsed.scheme}://{base_parsed.netloc}"
-
-                if uri.startswith('http://') or uri.startswith('https://'):
-                    absolute_uri = uri
-                elif uri.startswith('/'):
-                    # URIs, die mit '/' beginnen, relativ zum Domain-Root
-                    absolute_uri = urllib.parse.urljoin(base_domain, uri)
-                else:
-                    # Relative URIs ohne führendes '/'
-                    absolute_uri = urllib.parse.urljoin(base_url, uri)
-
-                proxied_uri = f"/proxy_stream?url={urllib.parse.quote(absolute_uri, safe='')}"
-                logging.debug(f"Rewriting URI: {uri} -> {proxied_uri}")
-                return proxied_uri
-
-            # Durchgehen aller Segmente, Playlists und Media-Einträge
-            for segment in parsed_playlist.segments:
-                old_uri = segment.uri
-                segment.uri = rewrite_uri(segment.uri)
-                logging.debug(f"Rewriting segment URI: {old_uri} -> {segment.uri}")
-
-            for playlist in parsed_playlist.playlists:
-                old_uri = playlist.uri
-                playlist.uri = rewrite_uri(playlist.uri)
-                logging.debug(f"Rewriting playlist URI: {old_uri} -> {playlist.uri}")
-
-            for media in parsed_playlist.media:
-                if media.uri:
-                    old_uri = media.uri
-                    media.uri = rewrite_uri(media.uri)
-                    logging.debug(f"Rewriting media URI: {old_uri} -> {media.uri}")
-
-            # Serialisieren der modifizierten Playlist
-            modified_playlist = parsed_playlist.dumps()
-
-            logging.debug("Modified Playlist Content:")
-            logging.debug(modified_playlist)
-
-            return Response(
-                modified_playlist,
-                content_type=content_type
-            )
+        return_code = process.poll()
+        if return_code != 0:
+            logging.error(f"ffmpeg exited with code {return_code}")
+            logging.error(f"ffmpeg stderr: {error.strip()}")
         else:
-            # Bestimmen des MIME-Typs für verschiedene Medien
-            if stream_url.endswith('.ts'):
-                content_type = 'video/MP2T'
-            elif stream_url.endswith('.aac'):
-                content_type = 'audio/aac'
-            elif stream_url.endswith('.mp3'):
-                content_type = 'audio/mpeg'
-            # Fügen Sie weitere Dateiendungen und MIME-Typen nach Bedarf hinzu
-            else:
-                content_type = 'application/octet-stream'  # Fallback
+            logging.info(f"Transcoding completed successfully for stream: {original_url}")
 
-            logging.debug(f"Serving non-playlist content with Content-Type: {content_type}")
-
-            return Response(
-                response.iter_content(chunk_size=8192),
-                content_type=content_type
-            )
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error proxying stream: {e}")
-        return jsonify({"error": "Failed to proxy the stream."}), 500
+    except Exception as e:
+        logging.error(f"Error during transcoding: {e}")
+    finally:
+        # Remove from transcoding tasks
+        stream_hash = hashlib.md5(original_url.encode('utf-8')).hexdigest()
+        transcoding_tasks.pop(stream_hash, None)
 
 
 
 
+@main_bp.route('/transcoded/<stream_hash>/<filename>')
+def serve_transcoded(stream_hash, filename):
+    """
+    Serve the transcoded playlist and segment files.
+    """
+    logging.info(f"Received request for transcoded file: {stream_hash}/{filename}")
+
+    stream_cache_dir = os.path.join(get_cache_dir(), stream_hash)
+    logging.debug(f"Transcoding cache directory: {stream_cache_dir}")
+
+    # Sicherheitsüberprüfung zur Verhinderung von Directory Traversal
+    if '..' in filename or filename.startswith('/'):
+        logging.warning(f"Invalid filename requested: {filename}")
+        return jsonify({"error": "Invalid filename"}), 400
+
+    file_path = os.path.join(stream_cache_dir, filename)
+    logging.debug(f"Requested file path: {file_path}")
+
+    if not os.path.exists(file_path):
+        logging.error(f"File not found: {file_path}")
+        return jsonify({"error": "File not found"}), 404
+
+    logging.info(f"Serving file: {file_path}")
+    return send_from_directory(stream_cache_dir, filename)
 
 @main_bp.route('/api/categories')
 def get_categories():
@@ -166,15 +154,13 @@ def proxy_image():
 
         return send_file(BytesIO(response.content), mimetype=content_type)
     except requests.exceptions.RequestException as e:
-        #logging.error(f"Error proxying image: {e}")
+        logging.error(f"Error proxying image: {e}")
         
         default_icon_path = os.path.join(current_app.static_folder, 'default-logo_light.png')
         if os.path.exists(default_icon_path):
             return send_file(default_icon_path, mimetype='image/png')
         else:
             return jsonify({"error": "Default image not found"}), 500
-
-
 
 @main_bp.route('/get_stream', methods=['POST'])
 def get_stream():
@@ -188,9 +174,28 @@ def get_stream():
     if not stream_url:
         return jsonify({'error': 'No stream URL provided'}), 400
 
-    proxied_url = f"{request.host_url}proxy_stream?url={requests.utils.quote(stream_url, safe='')}"
-    
-    return jsonify({'stream_url': proxied_url}), 200
+    # Compute hash and check if transcoded playlist exists
+    stream_hash = hashlib.md5(stream_url.encode('utf-8')).hexdigest()
+    stream_cache_dir = os.path.join(get_cache_dir(), stream_hash)
+    playlist_path = os.path.join(stream_cache_dir, 'playlist.m3u8')
+
+    if not os.path.exists(playlist_path):
+        # Initiate transcoding
+        if stream_hash not in transcoding_tasks:
+            os.makedirs(stream_cache_dir, exist_ok=True)
+            logging.info(f"Starting transcoding for stream: {stream_url}")
+
+            thread = threading.Thread(target=transcode_stream, args=(stream_url, stream_cache_dir))
+            thread.start()
+            transcoding_tasks[stream_hash] = thread
+
+        # Transcoding in progress
+        return jsonify({'message': 'Transcoding in progress', 'stream_url': f"/transcoded/{stream_hash}/playlist.m3u8"}), 202
+    else:
+        # Transcoding is complete, provide the stream URL
+        proxied_url = f"{request.host_url}transcoded/{stream_hash}/playlist.m3u8"
+        logging.info(f"Serving transcoded stream: {proxied_url}")
+        return jsonify({'stream_url': proxied_url}), 200
 
 
 

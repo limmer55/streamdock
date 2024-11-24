@@ -11,7 +11,7 @@ def create_app():
         static_folder=os.path.join(os.path.dirname(__file__), '../static')
     )
 
-    logging.basicConfig(level=logging.ERROR)
+    logging.basicConfig(level=logging.DEBUG)  # Setze auf DEBUG für detaillierte Logs
 
     # Priorität: Umgebungsvariable > config.json
     m3u_url_env = os.environ.get('M3U_URL')
@@ -36,9 +36,13 @@ def create_app():
     with app.app_context():
         app.register_blueprint(main_bp)
 
+    # Definiere das Stream-Cache-Verzeichnis innerhalb des statischen Verzeichnisses
     stream_cache_path = os.path.join(app.static_folder, 'stream_cache')
     if not os.path.exists(stream_cache_path):
         os.makedirs(stream_cache_path)
         logging.info(f"Created stream cache folder: {stream_cache_path}")
+
+    # Speichern Sie den Cache-Pfad in der App-Konfiguration für den Zugriff in anderen Modulen
+    app.config['STREAM_CACHE_PATH'] = stream_cache_path
 
     return app

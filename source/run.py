@@ -19,8 +19,6 @@ class Suppress429Filter(logging.Filter):
         # Unterdrücke Logs, die "429" enthalten
         return "429 Client Error" not in record.getMessage()
 
-
-os.makedirs('/tmp/transcoded_stream', exist_ok=True)
       
 app = create_app()
 
