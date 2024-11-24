@@ -94,6 +94,9 @@ commands.txt
 GetFileContent.py
 
 
+# temp folders and files
+stream_cache
+
 
 
 

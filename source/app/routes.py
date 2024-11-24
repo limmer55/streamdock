@@ -29,6 +29,14 @@ def index():
     return render_template('index.html')
 
 
+import os
+import subprocess
+import logging
+import hashlib
+
+# Beispielhafte globale Variable für laufende Transcodierungsaufgaben
+transcoding_tasks = {}
+
 def transcode_stream(original_url, output_dir):
     """
     Transcode the original stream to HLS using ffmpeg.
@@ -39,29 +47,29 @@ def transcode_stream(original_url, output_dir):
     # Stelle sicher, dass das Ausgabeverzeichnis existiert
     os.makedirs(output_dir, exist_ok=True)
 
-    # ffmpeg command to transcode to HLS mit beschränkter Anzahl von Segmente
+    # ffmpeg command to transcode to HLS mit beschränkter Anzahl von Segmenten
     ffmpeg_command = [
         'ffmpeg',
         '-i', original_url,
         '-c:v', 'libx264',
         '-c:a', 'aac',
-        '-ac', '2',  # Force stereo audio
-        '-strict', 'experimental',
+        '-ac', '2',  # Erzwingt Stereo-Audio
         '-f', 'hls',
         '-hls_time', '4',
-        '-hls_playlist_type', 'event',
-        '-hls_list_size', '5',            # Beschränkt die Playlist auf 5 Segmente
-        '-hls_flags', 'delete_segments',   # Löscht ältere Segmente, um die Anzahl zu begrenzen
+        '-hls_list_size', '5',          # Beschränkt die Playlist auf 5 Segmente
+        '-hls_flags', 'delete_segments', # Löscht ältere Segmente
         '-hls_segment_filename', segment_path,
         playlist_path
     ]
-        
-    
-    
 
     try:
         logging.info(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
-        process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(
+            ffmpeg_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
 
         # Stream ffmpeg output in Echtzeit
         while True:
@@ -84,9 +92,12 @@ def transcode_stream(original_url, output_dir):
     except Exception as e:
         logging.error(f"Error during transcoding: {e}")
     finally:
-        # Remove from transcoding tasks
+        # Entfernen aus den laufenden Transcodierungsaufgaben
         stream_hash = hashlib.md5(original_url.encode('utf-8')).hexdigest()
         transcoding_tasks.pop(stream_hash, None)
+
+
+
 
 
 
