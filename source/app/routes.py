@@ -1,18 +1,17 @@
 import hashlib
 import subprocess
 import threading
-import time
+import logging
+import os
 
 from flask import render_template, Blueprint, jsonify, request, current_app, send_file, Response, send_from_directory
 from .m3u_parser import parse_m3u_channels_and_categories
-import os
-import logging
+from .utils import clear_stream_cache
 import json
 import requests
 from io import BytesIO
 import urllib.parse
 import re
-
 import m3u8
 
 main_bp = Blueprint('main', __name__)
@@ -26,16 +25,8 @@ transcoding_tasks = {}
 
 @main_bp.route('/')
 def index():
+    clear_stream_cache()
     return render_template('index.html')
-
-
-import os
-import subprocess
-import logging
-import hashlib
-
-# Beispielhafte globale Variable für laufende Transcodierungsaufgaben
-transcoding_tasks = {}
 
 def transcode_stream(original_url, output_dir):
     """
@@ -47,20 +38,41 @@ def transcode_stream(original_url, output_dir):
     # Stelle sicher, dass das Ausgabeverzeichnis existiert
     os.makedirs(output_dir, exist_ok=True)
 
-    # ffmpeg command to transcode to HLS mit beschränkter Anzahl von Segmenten
+    # FFmpeg-Befehl zum Transkodieren in HLS mit beschränkter Anzahl von Segmenten
     ffmpeg_command = [
         'ffmpeg',
+        '-loglevel', 'error',
         '-i', original_url,
         '-c:v', 'libx264',
         '-c:a', 'aac',
-        '-ac', '2',  # Erzwingt Stereo-Audio
+        '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '4',
-        '-hls_list_size', '5',          # Beschränkt die Playlist auf 5 Segmente
-        '-hls_flags', 'delete_segments', # Löscht ältere Segmente
+        '-hls_time', '2',
+        '-hls_list_size', '3',
+        '-hls_flags', 'delete_segments',
         '-hls_segment_filename', segment_path,
-        playlist_path
+        playlist_path,
+        '-http_persistent', '1',
+        '-reconnect', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '2'
     ]
+
+
+    def log_stream(stream, log_level, prefix):
+        """
+        Liest den Stream und protokolliert jede Zeile mit dem angegebenen Log-Level und Prefix.
+        """
+        for line in iter(stream.readline, ''):
+            if line:
+                message = line.strip()
+                if log_level == 'stdout':
+                    logging.debug(f"{prefix} stdout: {message}")
+                    print(f"{prefix} stdout: {message}")
+                elif log_level == 'stderr':
+                    logging.debug(f"{prefix} stderr: {message}")
+                    print(f"{prefix} stderr: {message}")
+        stream.close()
 
     try:
         logging.info(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
@@ -71,30 +83,36 @@ def transcode_stream(original_url, output_dir):
             text=True
         )
 
-        # Stream ffmpeg output in Echtzeit
-        while True:
-            output = process.stdout.readline()
-            error = process.stderr.readline()
-            if output:
-                logging.debug(f"ffmpeg stdout: {output.strip()}")
-            if error:
-                logging.debug(f"ffmpeg stderr: {error.strip()}")
-            if output == '' and process.poll() is not None:
-                break
+        # Starte separate Threads für stdout und stderr
+        stdout_thread = threading.Thread(target=log_stream, args=(process.stdout, 'stdout', 'ffmpeg'))
+        stderr_thread = threading.Thread(target=log_stream, args=(process.stderr, 'stderr', 'ffmpeg'))
 
-        return_code = process.poll()
+        stdout_thread.start()
+        stderr_thread.start()
+
+        # Warte, bis der FFmpeg-Prozess beendet ist
+        process.wait()
+
+        # Warte, bis beide Threads abgeschlossen sind
+        stdout_thread.join()
+        stderr_thread.join()
+
+        return_code = process.returncode
         if return_code != 0:
             logging.error(f"ffmpeg exited with code {return_code}")
-            logging.error(f"ffmpeg stderr: {error.strip()}")
+            print(f"ffmpeg exited with code {return_code}")
         else:
             logging.info(f"Transcoding completed successfully for stream: {original_url}")
+            print(f"Transcoding completed successfully for stream: {original_url}")
 
     except Exception as e:
         logging.error(f"Error during transcoding: {e}")
+        print(f"Error during transcoding: {e}")
     finally:
         # Entfernen aus den laufenden Transcodierungsaufgaben
         stream_hash = hashlib.md5(original_url.encode('utf-8')).hexdigest()
         transcoding_tasks.pop(stream_hash, None)
+
 
 
 

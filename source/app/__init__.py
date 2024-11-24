@@ -11,7 +11,6 @@ def create_app():
         static_folder=os.path.join(os.path.dirname(__file__), '../static')
     )
 
-    logging.basicConfig(level=logging.DEBUG)  # Setze auf DEBUG für detaillierte Logs
 
     # Priorität: Umgebungsvariable > config.json
     m3u_url_env = os.environ.get('M3U_URL')
