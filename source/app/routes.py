@@ -166,7 +166,7 @@ def proxy_image():
 
         return send_file(BytesIO(response.content), mimetype=content_type)
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error proxying image: {e}")
+        #logging.error(f"Error proxying image: {e}")
         
         default_icon_path = os.path.join(current_app.static_folder, 'default-logo_light.png')
         if os.path.exists(default_icon_path):

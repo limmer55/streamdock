@@ -143,7 +143,8 @@
                             channelP.setAttribute('data-channel-name', channel.name);
                             channelP.setAttribute('data-stream-url', channel.url);
 
-                            const iconUrl = channel.icon
+                            // Hier wird überprüft, ob die Icon-URL von i.imgur.com stammt
+                            const iconUrl = channel.icon && !channel.icon.includes('i.imgur.com')
                                 ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
                                 : defaultIconUrl;
 
@@ -154,6 +155,7 @@
                             iconImg.alt = "Icon";
                             iconImg.classList.add('channel-icon');
 
+                            // Fehlerhandling für defekte Icons
                             iconImg.onerror = function () {
                                 this.onerror = null;
                                 this.src = defaultIconUrl;
