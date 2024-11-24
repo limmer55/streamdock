@@ -6,6 +6,7 @@ import os
 
 from flask import render_template, Blueprint, jsonify, request, current_app, send_file, Response, send_from_directory
 from .m3u_parser import parse_m3u_channels_and_categories
+from .helpers import get_cache_dir
 from .utils import clear_stream_cache
 import json
 import requests
@@ -55,7 +56,8 @@ def transcode_stream(original_url, output_dir):
         '-http_persistent', '1',
         '-reconnect', '1',
         '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '2'
+        '-reconnect_delay_max', '2',
+        '-preset', 'veryfast'
     ]
 
 

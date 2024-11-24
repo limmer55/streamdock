@@ -242,11 +242,10 @@ body {
     height: 60px;
     animation: spin 1s linear infinite;
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; 
+    left: 50%; 
     transform: translate(-50%, -50%);
     z-index: 1000;
-    display: none;
 }
 
 @keyframes spin {
@@ -422,7 +421,27 @@ body {
 }
 
 
+/* Loader Text */
+.loader-text {
+    color: #ffffff; /* White text for visibility */
+    font-size: 1.2em;
+    text-align: center;
+    margin-top: 10px; /* Add spacing between spinner and text */
+    position: absolute;
+    top: calc(50% + 40px); /* Adjust below the spinner */
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 80%;
+    word-wrap: break-word;
+}
 
+/* Optional: Responsive Anpassungen für den Lade-Text */
+@media (max-width: 600px) {
+    .loader-text {
+        font-size: 1em;
+        max-width: 90%;
+    }
+}
 
 /* Mobile stuff */
 
