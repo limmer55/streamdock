@@ -6,9 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
-# Apple Mac
+# Macos
 **/.DS_Store
 .DS_Store
+.nosync
 
 # Distribution / packaging
 .Python
@@ -93,7 +94,10 @@ config.json
 playlist.json
 commands.txt
 GetFileContent.py
+cache
 
+# temp folders and files
+stream_cache
 
 
 
