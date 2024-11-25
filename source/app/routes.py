@@ -56,6 +56,7 @@ def transcode_stream(original_url, output_dir, stream_hash):
     ffmpeg_command = [
         'ffmpeg',
         '-loglevel', 'error',
+        '-hwaccel', 'qsv',
         '-i', original_url,
         '-c:v', 'libx264',
         '-c:a', 'aac',
