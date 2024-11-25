@@ -15,7 +15,6 @@ from io import BytesIO
 
 main_bp = Blueprint('main', __name__)
 
-# Globale Variablen zur Verwaltung aktiver Streams
 active_stream_hashes = set()
 stream_lock = threading.Lock()
 transcoding_tasks = {}
@@ -31,10 +30,7 @@ def transcode_stream(original_url, output_dir, stream_hash):
     playlist_path = os.path.join(output_dir, 'playlist.m3u8')
     segment_path = os.path.join(output_dir, 'segment_%03d.ts')
 
-    # Stelle sicher, dass das Ausgabeverzeichnis existiert
     os.makedirs(output_dir, exist_ok=True)
-
-    # FFmpeg-Befehl zum Transkodieren in HLS
     ffmpeg_command = [
         'ffmpeg',
         '-loglevel', 'error',
@@ -70,7 +66,6 @@ def transcode_stream(original_url, output_dir, stream_hash):
                     print(f"{prefix} stderr: {message}")
         stream.close()
 
-    # Füge den Stream zur aktiven Menge hinzu
     with stream_lock:
         active_stream_hashes.add(stream_hash)
 
@@ -83,7 +78,6 @@ def transcode_stream(original_url, output_dir, stream_hash):
             text=True
         )
 
-        # Starte separate Threads für stdout und stderr
         stdout_thread = threading.Thread(target=log_stream, args=(process.stdout, 'stdout', 'ffmpeg'))
         stderr_thread = threading.Thread(target=log_stream, args=(process.stderr, 'stderr', 'ffmpeg'))
 
@@ -124,7 +118,6 @@ def serve_transcoded(stream_hash, filename):
     stream_cache_dir = os.path.join(get_cache_dir(), stream_hash)
     logging.debug(f"Transcoding cache directory: {stream_cache_dir}")
 
-    # Sicherheitsüberprüfung zur Verhinderung von Directory Traversal
     if '..' in filename or filename.startswith('/'):
         logging.warning(f"Invalid filename requested: {filename}")
         return jsonify({"error": "Invalid filename"}), 400
@@ -198,7 +191,6 @@ def get_stream():
     playlist_path = os.path.join(stream_cache_dir, 'playlist.m3u8')
 
     with stream_lock:
-        # Wenn der Stream bereits aktiv ist oder bereits transkodiert wurde
         if stream_hash in active_stream_hashes or os.path.exists(playlist_path):
             if os.path.exists(playlist_path):
                 proxied_url = f"{request.host_url}transcoded/{stream_hash}/playlist.m3u8"
@@ -207,8 +199,6 @@ def get_stream():
             else:
                 return jsonify({'message': 'Transcoding in progress', 'stream_url': f"/transcoded/{stream_hash}/playlist.m3u8"}), 202
 
-        # Ein neuer Stream wird angefordert
-        # Cache löschen, aber aktive Streams ausschließen
         clear_stream_cache(exclude_hashes=active_stream_hashes)
 
         # Prüfen, ob bereits eine Transkodierung läuft

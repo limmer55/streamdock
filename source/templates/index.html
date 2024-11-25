@@ -113,7 +113,7 @@
         }
     
         function loadCategories() {
-            showLoader('Lade Kategorien...'); // Optional: Anpassbarer Text beim Laden der Kategorien
+            showLoader('Load categories...'); // Optional: Anpassbarer Text beim Laden der Kategorien
             fetch('/api/categories')
                 .then(response => response.json())
                 .then(data => {
@@ -499,7 +499,7 @@
                 if (externalStreamUrl) {
                     try {
                         
-                        showLoader('Stream wird transkodiert...'); // Benutzerdefinierter Text
+                        showLoader('Transcoding stream...'); // Benutzerdefinierter Text
                         let response = await fetch('/get_stream', {
                             method: 'POST',
                             headers: {
