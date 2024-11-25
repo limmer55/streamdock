@@ -242,7 +242,7 @@ def monitor_streams():
             with stream_lock:
                 inactive_streams = [
                     stream_hash for stream_hash, last_time in last_access.items()
-                    if current_time - last_time > 10  # Timeout nach 10 Sekunden
+                    if current_time - last_time > 40  # Timeout nach 10 Sekunden
                 ]
                 for stream_hash in inactive_streams:
                     logging.info(f"Stopping transcoding due to inactivity: {stream_hash}")
