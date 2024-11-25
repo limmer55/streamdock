@@ -61,7 +61,7 @@ def transcode_stream(original_url, output_dir, stream_hash):
         '-c:a', 'aac',
         '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '2',
+        '-hls_time', '5',
         '-hls_list_size', '10',
         '-hls_flags', 'delete_segments',
         '-hls_segment_filename', segment_path,
