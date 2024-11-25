@@ -90,8 +90,9 @@ playlist.json
 commands.txt
 GetFileContent.py
 
-
-
+# mac
+**/.DS_Store
+.DS_Store
 
 
 # pyenv
