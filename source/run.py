@@ -4,7 +4,7 @@ import threading
 
 # Logging-config
 logging.basicConfig(
-    level=logging.ERROR,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log-Ausgabeformat
 )
 
