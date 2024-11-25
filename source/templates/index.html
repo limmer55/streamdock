@@ -24,7 +24,7 @@
 
     <!-- Theme and Logo Script -->
     <script>
-        function setTheme() {
+            function setTheme() {
             const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
             const currentTheme = prefersDarkScheme.matches ? "dark" : "light";
             document.documentElement.setAttribute("data-theme", currentTheme);
@@ -55,8 +55,11 @@
     <div id="overlay" class="overlay"></div>
 
     <!-- Loader Elements -->
-    <div id="loaderOverlay" class="loader-overlay"></div>
-    <div id="loader" class="loader"></div>
+    <div id="loaderOverlay" class="loader-overlay">
+        <div id="loader" class="loader"></div>
+        <div id="loaderText" class="loader-text"></div> 
+    </div>
+
 
     <!-- Sidebar (Channel Menu) -->
     <div id="sidebar" class="sidebar visible">
@@ -108,9 +111,9 @@
                 ? "{{ url_for('static', filename='default-logo_dark.png') }}"
                 : "{{ url_for('static', filename='default-logo_light.png') }}";
         }
-
+    
         function loadCategories() {
-            showLoader();
+            showLoader('Lade Kategorien...'); // Optional: Anpassbarer Text beim Laden der Kategorien
             fetch('/api/categories')
                 .then(response => response.json())
                 .then(data => {
@@ -141,9 +144,10 @@
                             const channelP = document.createElement('p');
                             channelP.classList.add('channel-name');
                             channelP.setAttribute('data-channel-name', channel.name);
-                            channelP.setAttribute('data-stream-url', channel.url);
+                            channelP.setAttribute('data-stream-url', channel.url); // Hier die Änderung
 
-                            const iconUrl = channel.icon
+                            // Proxy-Image verwenden, wenn nicht von i.imgur.com
+                            const iconUrl = channel.icon && !channel.icon.includes('i.imgur.com')
                                 ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
                                 : defaultIconUrl;
 
@@ -154,6 +158,7 @@
                             iconImg.alt = "Icon";
                             iconImg.classList.add('channel-icon');
 
+                            // Fehlerbehandlung für defekte Icons
                             iconImg.onerror = function () {
                                 this.onerror = null;
                                 this.src = defaultIconUrl;
@@ -186,7 +191,7 @@
                     alert('Categories could not be loaded. Please try again later.');
                 });
         }
-
+    
         window.addEventListener('DOMContentLoaded', function () {
             setTheme();
 
@@ -205,24 +210,24 @@
         });
 
         window.addEventListener('resize', function () {
-        const overlay = document.getElementById('overlay');
-        const sidebar = document.getElementById('sidebar');
-        if (window.innerWidth > 1000) {
-            overlay.classList.remove('active');
-            sidebar.classList.add('visible');
-        } else {
-            overlay.classList.remove('active');
-            sidebar.classList.remove('visible');
-        }
+            const overlay = document.getElementById('overlay');
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 1000) {
+                overlay.classList.remove('active');
+                sidebar.classList.add('visible');
+            } else {
+                overlay.classList.remove('active');
+                sidebar.classList.remove('visible');
+            }
         });
-
-
+    
+    
         function toggleChannels(category) {
             const channelsList = document.getElementById(`channels-${category}`);
             const isVisible = channelsList.style.display === "block";
             channelsList.style.display = isVisible ? "none" : "block";
         }
-
+    
         document.getElementById("searchInput").addEventListener("input", function () {
             const searchValue = this.value.toLowerCase();
             const categoryContainer = document.getElementById("category-container");
@@ -256,19 +261,21 @@
                 });
             }
         });
-
-        function showLoader() {
+    
+        function showLoader(text = '') {
             document.getElementById("loaderOverlay").classList.add("active");
             document.getElementById("loader").classList.add("active");
+            document.getElementById("loaderText").textContent = text;
         }
-
+    
         function hideLoader() {
             document.getElementById("loaderOverlay").classList.remove("active");
             document.getElementById("loader").classList.remove("active");
+            document.getElementById("loaderText").textContent = '';
         }
-
+    
         let currentHls = null;
-
+    
         function playChannel(streamUrl, channelName, channelIcon) {
             console.log('Playing Channel:', channelName, 'Stream URL:', streamUrl);
             const playerContainer = document.getElementById("player-container");
@@ -320,7 +327,7 @@
                 currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                     console.log('Hls.js manifest parsed, level:', data.levels);
                     video.play();
-                    hideLoader();
+                    hideLoader(); // Loader ausblenden, wenn Manifest geparst ist
 
                     // Hide subtitles
                     let textTracks = video.textTracks;
@@ -393,13 +400,13 @@
                 }
             }
         }
-
+    
         window.addEventListener('beforeunload', function () {
             if (currentHls) {
                 currentHls.destroy();
             }
         });
-
+    
         function displaySimilarChannels(similarChannels, currentChannelName) {
             var similarChannelsDiv = document.getElementById('similar-channels');
             var sidebarRightDiv = document.querySelector('.sidebar-right');
@@ -426,6 +433,10 @@
                     channelP.setAttribute('data-channel-name', channel.name);
                     channelP.setAttribute('data-stream-url', channel.url);
 
+                    // Always use the proxy_stream endpoint for transcoding
+                    const proxiedUrl = `/proxy_stream?url=${encodeURIComponent(channel.url)}`;
+                    channelP.setAttribute('data-stream-url', proxiedUrl);
+
                     const iconUrl = channel.icon
                         ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
                         : getDefaultIconUrl();
@@ -447,7 +458,7 @@
                 });
             }
         }
-
+    
         // Function to Toggle the Sidebar with Animation
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -456,7 +467,7 @@
             sidebar.classList.toggle('visible');
             overlay.classList.toggle('active');
         }
-
+    
         // Close Sidebar When Clicking on the Overlay
         document.getElementById('overlay').addEventListener('click', function () {
             const sidebar = document.getElementById('sidebar');
@@ -464,7 +475,7 @@
             sidebar.classList.remove('visible');
             overlay.classList.remove('active');
         });
-
+    
         // Ensure the Overlay is Hidden on Larger Screens
         window.addEventListener('resize', function () {
             const overlay = document.getElementById('overlay');
@@ -476,63 +487,105 @@
                 overlay.classList.add('active');
             }
         });
-
+    
         // Modify the handleChannelClick Function to Hide the Sidebar on Mobile Devices
-        function handleChannelClick(event) {
+        async function handleChannelClick(event) {
+            
             const channelElement = event.target.closest(".channel-name");
             if (channelElement) {
-                const streamUrl = channelElement.getAttribute("data-stream-url");
+                const externalStreamUrl = channelElement.getAttribute("data-stream-url");
                 const channelName = channelElement.getAttribute("data-channel-name");
-                const channelIcon = channelElement.getAttribute("data-channel-icon");
-                if (streamUrl) {
-                    fetch('/get_stream', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ stream_url: streamUrl })
-                    })
-                        .then(response => {
-                            console.log('Response Status:', response.status);
-                            if (response.status === 200) {
-                                return response.json();
-                            } else {
-                                return response.json().then(data => { throw new Error(data.error || 'Unknown error'); });
-                            }
-                        })
-                        .then(data => {
-                            console.log('Stream Data:', data);
-                            if (data.stream_url) {
-                                playChannel(data.stream_url, channelName, channelIcon);
-                                document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
-                                channelElement.classList.add('selected');
+                const channelIcon = channelElement.getAttribute("data-channel-icon");                
+                if (externalStreamUrl) {
+                    try {
+                        
+                        showLoader('Stream wird transkodiert...'); // Benutzerdefinierter Text
+                        let response = await fetch('/get_stream', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ stream_url: externalStreamUrl }) // Senden der externen URL
+                        });
 
-                                // Hide the sidebar on mobile devices after selecting a channel
-                                const sidebar = document.getElementById('sidebar');
-                                const overlay = document.getElementById('overlay');
-                                if (window.innerWidth <= 1000) {
-                                    sidebar.classList.remove('visible');
-                                    overlay.classList.remove('active');
+                        let data = await response.json();
+
+                        if (response.status === 202) {
+                            // Transcoding in progress, poll alle 5 Sekunden
+                            let maxRetries = 10;
+                            let retries = 0;
+                            let streamReady = false;
+
+                            while (retries < maxRetries && !streamReady) {
+                                await new Promise(resolve => setTimeout(resolve, 5000)); // Warte 5 Sekunden
+
+                                response = await fetch('/get_stream', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ stream_url: externalStreamUrl })
+                                });
+
+                                data = await response.json();
+
+                                if (response.status === 200 && data.stream_url) {
+                                    streamReady = true;
+                                    playChannel(data.stream_url, channelName, channelIcon);
+                                    document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
+                                    channelElement.classList.add('selected');
+
+                                    // Sidebar auf mobilen Geräten ausblenden
+                                    const sidebar = document.getElementById('sidebar');
+                                    const overlay = document.getElementById('overlay');
+                                    if (window.innerWidth <= 1000) {
+                                        sidebar.classList.remove('visible');
+                                        overlay.classList.remove('active');
+                                    }
+
+                                } else if (response.status === 400 || response.status === 500) {
+                                    throw new Error(data.error || 'Unknown error');
                                 }
 
-                            } else if (data.error) {
-                                alert(`Error: ${data.error}`);
+                                retries++;
                             }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert(error.message);
-                        });
+
+                            if (!streamReady) {
+                                throw new Error('Transcoding timed out. Please try again later.');
+                            }
+                        } else if (response.status === 200 && data.stream_url) {
+                            // Transcoding bereits abgeschlossen
+                            playChannel(data.stream_url, channelName, channelIcon);
+                            document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
+                            channelElement.classList.add('selected');
+
+                            // Sidebar auf mobilen Geräten ausblenden
+                            const sidebar = document.getElementById('sidebar');
+                            const overlay = document.getElementById('overlay');
+                            if (window.innerWidth <= 1000) {
+                                sidebar.classList.remove('visible');
+                                overlay.classList.remove('active');
+                            }
+
+                        } else {
+                            throw new Error(data.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert(error.message);
+                    } finally {
+                        hideLoader();
+                    }
                 }
             }
         }
-
+    
         document.addEventListener("click", handleChannelClick);
         document.addEventListener("touchstart", handleChannelClick);
-
+    
         var allChannels = [];
         var baseNameToChannels = {};
-
+    
         function normalizeChannelName(name) {
             name = name.toUpperCase();
             name = name.replace(/\(.*?\)/g, '');
@@ -565,6 +618,34 @@
             var noSimilarChannelsMessage = document.getElementById('no-similar-channels-message');
             noSimilarChannelsMessage.style.display = 'none';
         }
+
+        async function clearCache() {
+            try {
+                const response = await fetch('/clear_cache', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    console.log(data.message);
+                    return true;
+                } else {
+                    console.error(data.error);
+                    alert('Fehler beim Löschen des Caches: ' + data.error);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Fehler beim Senden der Anfrage zum Löschen des Caches:', error);
+                alert('Ein unerwarteter Fehler ist beim Löschen des Caches aufgetreten.');
+                return false;
+            }
+        }
+
+
     </script>
 </body>
 

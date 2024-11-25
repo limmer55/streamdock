@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # Macos
-.DS_Store
+**/.DS_Store
 
 # Distribution / packaging
 .Python
@@ -93,6 +93,9 @@ playlist.json
 commands.txt
 GetFileContent.py
 
+
+# temp folders and files
+stream_cache
 
 
 
