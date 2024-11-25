@@ -25,4 +25,5 @@ ENV FLASK_ENV production
 EXPOSE 6050
 
 # Command to start the application using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:6050", "run:app", "--workers", "$(expr $(nproc) * 2 + 1)"]
+CMD gunicorn --bind 0.0.0.0:6050 run:app --workers $(expr $(nproc) \* 2 + 1)
+
