@@ -1,9 +1,10 @@
-import os
-from app import create_app
+from app import create_app, monitor_streams
 import logging
+import threading
 
+# Logging-Konfiguration
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.ERROR,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log-Ausgabeformat
 )
 
@@ -24,7 +25,17 @@ http_error_filter = SuppressHTTPErrorFilter(suppressed_errors)
 
 logging.getLogger().addFilter(http_error_filter)
 
+# Flask-App erstellen
 app = create_app()
 
+def start_monitor_streams(app):
+    with app.app_context():
+        monitor_streams()
+
+# Starte den Überwachungs-Thread
+stream_monitor_thread = threading.Thread(target=start_monitor_streams, args=(app,), daemon=True)
+stream_monitor_thread.start()
+
 if __name__ == "__main__":
+    # Flask-App starten
     app.run(host="0.0.0.0", port=6050, debug=False)

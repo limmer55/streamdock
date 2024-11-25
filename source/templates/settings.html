@@ -24,13 +24,11 @@
         window.addEventListener('DOMContentLoaded', setTheme);
     </script>
 </head>
-<body>
+<body class="settings-page">
     <div class="content">
         <div class="menu-button-container">
-            <button class="menu-button" onclick="toggleMenu()">☰</button>
-            <div id="dropdownMenu" class="dropdown-menu" style="display: none;">
-                <a href="/">Home</a>
-            </div>
+            <!-- Back to Home Link -->
+            <a href="/" class="menu-button">← Home</a>
         </div>
 
         <h1>Settings</h1>
@@ -149,25 +147,7 @@
     <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
     <script src="https://unpkg.com/@videojs/http-streaming@latest/dist/videojs-http-streaming.min.js"></script>
 
-    <script>
-        function toggleMenu() {
-            const dropdown = document.getElementById("dropdownMenu");
-            if (dropdown.style.display === "none" || dropdown.style.display === "") {
-                dropdown.style.display = "block";
-            } else {
-                dropdown.style.display = "none";
-            }
-        }
 
-        window.onclick = function(event) {
-            if (!event.target.matches('.menu-button')) {
-                const dropdown = document.getElementById("dropdownMenu");
-                if (dropdown.style.display === "block") {
-                    dropdown.style.display = "none";
-                }
-            }
-        }
-    </script>
     
 </body>
 </html>

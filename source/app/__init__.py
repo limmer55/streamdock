@@ -1,8 +1,9 @@
 from flask import Flask
-from .routes import main_bp
+from .routes import main_bp, monitor_streams
 import os
 import logging
 import json
+
 
 def create_app():
     app = Flask(
@@ -45,3 +46,4 @@ def create_app():
     app.config['STREAM_CACHE_PATH'] = stream_cache_path
 
     return app
+
