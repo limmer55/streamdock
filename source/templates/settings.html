@@ -68,7 +68,6 @@
                     const container = document.querySelector('.country-buttons-container');
                     container.innerHTML = '';
 
-                    // Länder filtern, die standardmäßig angezeigt werden sollen
                     const defaultCountries = countries.filter(country =>
                         country.name.toLowerCase().includes('united states') ||
                         country.name.toLowerCase().includes('united kingdom') ||
@@ -79,7 +78,6 @@
 
                     const hiddenCountries = countries.filter(country => !defaultCountries.includes(country));
 
-                    // Standard-Länder rendern
                     defaultCountries.forEach(country => {
                         const button = document.createElement('button');
                         button.className = 'country-button';

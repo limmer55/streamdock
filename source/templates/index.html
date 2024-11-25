@@ -635,12 +635,12 @@
                     return true;
                 } else {
                     console.error(data.error);
-                    alert('Fehler beim Löschen des Caches: ' + data.error);
+                    alert('Error while deleting cache: ' + data.error);
                     return false;
                 }
             } catch (error) {
-                console.error('Fehler beim Senden der Anfrage zum Löschen des Caches:', error);
-                alert('Ein unerwarteter Fehler ist beim Löschen des Caches aufgetreten.');
+                console.error('Error sending deleting request:', error);
+                alert('Unknown error while sending deleting request.');
                 return false;
             }
         }
