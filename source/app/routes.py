@@ -71,7 +71,8 @@ def transcode_stream(original_url, output_dir, stream_hash):
         '-reconnect', '1',
         '-reconnect_streamed', '1',
         '-reconnect_delay_max', '2',
-        '-preset', 'ultrafast'
+        '-preset', 'ultrafast',
+        '-crf', '51'
     ]
 
     with stream_lock:
