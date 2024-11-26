@@ -7,6 +7,7 @@ WORKDIR /app
 # Install system dependencies required for the application and ffmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    vainfo \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
