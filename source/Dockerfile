@@ -8,6 +8,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     build-essential \
+    libva-dev \
+    libdrm-dev \
+    vainfo \
+    libmfx-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
