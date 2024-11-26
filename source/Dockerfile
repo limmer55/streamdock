@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libdrm-dev \
     vainfo \
     libmfx-dev \
+    intel-media-va-driver-non-free \
+    firmware-misc-nonfree \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
