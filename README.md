@@ -1,5 +1,9 @@
 # <img height="100px" src="./images/logo.png" />
 ## 📺 A Web-IPTV Player
+> [!WARNING]
+> Streamdock is still in its early stages. I've received a lot of valuable feedback, most of which highlights that certain codecs aren't running. Because of this, I’ve decided to implement transcoding (along with hardware acceleration) in future builds. Thank you for your patience.
+
+
 ![screenshot](https://github.com/Limmer55/streamdock/blob/main/images/Screenshot1.png?raw=true)
 ## Features
 - 📺 **Watch from everywhere**: No client required. Just use your browser.
