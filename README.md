@@ -18,7 +18,7 @@
 ## Installation
 ### Using docker
 ```bash
-docker run -d --name streamdock --network host --restart unless-stopped ghcr.io/limmer55/streamdock:latest
+docker run -d --name streamdock --network host -e PORT=6050 --restart unless-stopped ghcr.io/limmer55/streamdock:latest
 
 ```
 ### Docker Compose
@@ -32,6 +32,7 @@ services:
     network_mode: host
     environment:
       M3U_URL: "https://iptv-org.github.io/iptv/index.m3u" # optional, can be set in settings later
+      PORT: "6050"  # Set your desired port here, default 6050
     restart: unless-stopped
 
 ```
