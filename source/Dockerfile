@@ -13,9 +13,10 @@ COPY . .
 
 ENV FLASK_APP run.py
 ENV FLASK_ENV production
+ENV PORT=6050
 
 
-EXPOSE 6050
+EXPOSE ${PORT}
 
 
-CMD ["gunicorn", "--bind", "0.0.0.0:6050", "run:app"]
+CMD gunicorn --bind 0.0.0.0:${PORT} run:app
