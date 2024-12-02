@@ -1,0 +1,527 @@
+:root[data-theme="light"] {
+    --text: #121e21;
+    --background: #f5f9fa;
+    --primary: #2e5157;
+    --secondary: #95a8c6;
+    --accent: #5465a0;
+}
+
+:root[data-theme="dark"] {
+    --text: #deeaed;
+    --background: #05090a;
+    --primary: #394c6a;
+    --secondary: #394c6a;
+    --accent: #5f6fab;
+}
+
+:root[data-theme="dark"] #selected-channel {
+    color: #ffffff;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.logo {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.sidebar {
+    width: 280px;
+    min-width: 0;
+    height: 100vh;
+    background-color: var(--background);
+    color: var(--text);
+    padding: 20px;
+    box-sizing: border-box;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    overflow-y: auto;
+    box-shadow: none;
+    scrollbar-width: none;
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.search-bar {
+    width: calc(100% - 40px);
+    margin-top: 15px;
+    margin-bottom: 15px;
+    padding: 5px;
+    border-radius: 6px;
+    border: none;
+    background-color: var(--secondary);
+    color: var(--text);
+    font-size: 16px;
+}
+
+.menu-item {
+    padding: 0px;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    display: block;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.menu-item:hover {
+    color: var(--primary);
+}
+
+.channel-name {
+    color: var(--text);
+    margin: 3px 0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.channel-name:hover {
+    background-color: var(--secondary);
+}
+
+.channel-name.selected {
+    background-color: var(--primary);
+    color: var(--background);
+}
+
+.content {
+    margin-left: 280px;
+    padding: 20px;
+    background-color: var(--background);
+    color: var(--text);
+    min-height: 100vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    flex: 1;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.player-section {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#player-container {
+    width: 100%;
+    aspect-ratio: 16 / 9; /* Hält das 16:9-Seitenverhältnis */
+    margin: 0 auto;
+}
+
+#player-container video {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.sidebar-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-right h3 {
+    margin-top: 0;
+}
+
+.sidebar-right .channel-name {
+    cursor: pointer;
+}
+
+.channel-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+#selected-channel {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    color: var(--primary);
+    font-size: 1.2em;
+}
+
+#selected-channel img.selected-channel-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    border-radius: 4px;
+}
+
+.menu-button-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    position: relative; /* Ermöglicht die absolute Positionierung des Settings-Buttons */
+}
+
+.menu-button-container .settings-button {
+    position: absolute;
+    margin-top: 40px;
+    right: 0; /* Immer ganz rechts */
+}
+
+
+.menu-button {
+    background-color: var(--primary);
+    color: var(--background);
+    border: none;
+    padding: 10px 15px;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.menu-button:hover {
+    background-color: var(--accent);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    background-color: var(--background);
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    z-index: 1;
+    padding: 10px;
+    display: none;
+}
+
+.dropdown-menu a {
+    background-color: var(--primary);
+    color: var(--background);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 4px;
+}
+
+.dropdown-menu a:hover {
+    background-color: var(--accent);
+    color: var(--background);
+}
+
+.loader {
+    border: 8px solid var(--secondary);
+    border-top: 8px solid var(--primary);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    position: absolute;
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+}
+
+.loader-overlay.active,
+.loader.active {
+    display: block;
+}
+
+#search-results {
+    width: calc(100% - 40px);
+    background-color: var(--background);
+    border-radius: 6px;
+    padding: 10px;
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+}
+
+#search-results .channel-name {
+    margin: 5px 0;
+}
+
+.category {
+    margin-bottom: 10px;
+}
+
+.country-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.country-button {
+    display: flex;
+    align-items: center;
+    background-color: var(--primary);
+    color: var(--background);
+    border: none;
+    padding: 10px 15px;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.country-button:hover {
+    background-color: var(--accent);
+}
+
+.country-container {
+    margin-top: 20px;
+}
+
+.country-button.more {
+    background-color: var(--secondary);
+    color: var(--text);
+}
+
+/* Adjust styles for smaller screens */
+@media (max-width: 1000px) {
+    .sidebar {
+        /* Sidebar overlays content */
+        width: 250px;
+        position: fixed;
+        height: 100%;
+        top: 0;
+        left: 0; /* Visible by default */
+        z-index: 2000;
+        overflow-y: auto;
+        transition: opacity 0.3s ease;
+        background-color: var(--background);
+        opacity: 1;
+    }
+
+    .sidebar.hidden {
+        /* Hide sidebar by changing opacity */
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .content {
+        margin-left: 0;
+    }
+
+    /* Overlay to detect clicks outside the menu */
+    .overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1500;
+    }
+
+    .overlay.hidden {
+        display: none;
+    }
+}
+
+.menu-button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.menu-button {
+    background-color: var(--primary);
+    color: var(--background);
+    border: none;
+    padding: 10px 15px;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    text-decoration: none; /* Ensure that links look like buttons */
+}
+
+.menu-button:hover {
+    background-color: var(--accent);
+}
+
+.sidebar {
+    /* Existing styles */
+    
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100%;
+    background-color: var(--background);
+    color: var(--text);
+    overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    transform: translateX(0); /* Hide sidebar by default */
+    transition: transform 0.3s ease;
+    z-index: 2000;
+}
+
+.sidebar.visible {
+    transform: translateX(0); /* Show sidebar */
+}
+
+.overlay {
+    display: none; /* Hide overlay by default */
+}
+
+
+.settings-page .content {
+    margin-left: 0;
+}
+
+.logo-mobile {
+    display: none;
+}
+.sidebar .logo {
+    display: block;
+}
+
+
+/* Loader Text */
+.loader-text {
+    color: #ffffff; /* White text for visibility */
+    font-size: 1.2em;
+    text-align: center;
+    margin-top: 10px; /* Add spacing between spinner and text */
+    position: absolute;
+    top: calc(50% + 40px); /* Adjust below the spinner */
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+/* Optional: Responsive Anpassungen für den Lade-Text */
+@media (max-width: 600px) {
+    .loader-text {
+        font-size: 1em;
+        max-width: 90%;
+    }
+}
+
+/* Mobile stuff */
+
+@media (max-width: 1000px) {
+    .sidebar {
+        width: 250px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.visible {
+        transform: translateX(0);
+    }
+
+    .content {
+        margin-left: 0;
+    }
+
+    .overlay {
+        display: none;
+    }
+
+    .overlay.active {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1500;
+        
+    }
+
+    /* Adjust layout for mobile view */
+    .main-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .player-section,
+    .sidebar-right {
+        width: 100%;
+    }
+
+    .sidebar-right {
+        margin-top: 20px;
+    }
+}
+
+
+/* Zeige den Menü-Button nur auf kleinen Bildschirmen */
+@media (max-width: 1000px) {
+    .menu-button {
+        display: block;
+    }
+}
+
+/* Stil für den Menü-Text */
+.menu-button .menu-text {
+    display: none; /* Standardmäßig verstecken */
+    margin-left: 8px; /* Abstand zwischen Symbol und Text */
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Zeige den Menü-Text nur auf kleinen Bildschirmen */
+@media (max-width: 1000px) {
+    .menu-button .menu-text {
+        display: inline; /* In der mobilen Ansicht anzeigen */
+    }
+
+    /* Optional: Anpassen des Menü-Buttons für bessere Darstellung */
+    .menu-button {
+        display: flex;
+        align-items: center;
+    }
+}
+@media (min-width: 1001px) {
+    /* Blende nur den Toggle-Sidebar-Button aus */
+    .menu-button.toggle-sidebar-button {
+        display: none;
+    }
+}
