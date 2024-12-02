@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  streamdock:
+    container_name: streamdock
+    image: sss
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6050:6050"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=production
+      - M3U_URL="https://iptv-org.github.io/iptv/index.m3u"
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

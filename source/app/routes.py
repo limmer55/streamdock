@@ -1,11 +1,13 @@
 # routes.py
 import hashlib
+import shutil
 import subprocess
 import threading
 import logging
 import os
+import time
 
-from flask import render_template, Blueprint, jsonify, request, current_app, send_file, send_from_directory
+from flask import render_template, Blueprint, jsonify, request, current_app, send_file, send_from_directory, current_app
 from .m3u_parser import parse_m3u_channels_and_categories
 from .helpers import get_cache_dir
 from .utils import clear_stream_cache
@@ -15,14 +17,33 @@ from io import BytesIO
 
 main_bp = Blueprint('main', __name__)
 
-# Globale Variablen zur Verwaltung aktiver Streams
 active_stream_hashes = set()
 stream_lock = threading.Lock()
 transcoding_tasks = {}
+last_access = {}
+
 
 @main_bp.route('/')
 def index():
     return render_template('index.html')
+
+def log_stream(stream, log_level, prefix):
+    """
+    Reads the output stream and logs each line with the specified log level and prefix.
+    """
+    try:
+        for line in iter(stream.readline, ''):
+            if line:
+                message = line.strip()
+                if log_level == 'stdout':
+                    logging.info(f"{prefix} stdout: {message}")
+                elif log_level == 'stderr':
+                    logging.error(f"{prefix} stderr: {message}")
+    except Exception as e:
+        logging.error(f"Error reading {prefix} stream: {e}")
+    finally:
+        stream.close()
+
 
 def transcode_stream(original_url, output_dir, stream_hash):
     """
@@ -31,20 +52,21 @@ def transcode_stream(original_url, output_dir, stream_hash):
     playlist_path = os.path.join(output_dir, 'playlist.m3u8')
     segment_path = os.path.join(output_dir, 'segment_%03d.ts')
 
-    # Stelle sicher, dass das Ausgabeverzeichnis existiert
     os.makedirs(output_dir, exist_ok=True)
-
-    # FFmpeg-Befehl zum Transkodieren in HLS
     ffmpeg_command = [
         'ffmpeg',
         '-loglevel', 'error',
+        '-hwaccel', 'vaapi',
+        '-hwaccel_output_format', 'vaapi',
+        '-hwaccel_device', '/dev/dri/renderD128',
         '-i', original_url,
-        '-c:v', 'libx264',
+        '-vaapi_device', '/dev/dri/renderD128',
+        '-c:v', 'h264_vaapi',
         '-c:a', 'aac',
         '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '5',
-        '-hls_list_size', '10',
+        '-hls_time', '4',
+        '-hls_list_size', '5',
         '-hls_flags', 'delete_segments',
         '-hls_segment_filename', segment_path,
         playlist_path,
@@ -55,25 +77,10 @@ def transcode_stream(original_url, output_dir, stream_hash):
         '-preset', 'ultrafast'
     ]
 
-    def log_stream(stream, log_level, prefix):
-        """
-        Liest den Stream und protokolliert jede Zeile mit dem angegebenen Log-Level und Prefix.
-        """
-        for line in iter(stream.readline, ''):
-            if line:
-                message = line.strip()
-                if log_level == 'stdout':
-                    logging.debug(f"{prefix} stdout: {message}")
-                    print(f"{prefix} stdout: {message}")
-                elif log_level == 'stderr':
-                    logging.debug(f"{prefix} stderr: {message}")
-                    print(f"{prefix} stderr: {message}")
-        stream.close()
-
-    # Füge den Stream zur aktiven Menge hinzu
     with stream_lock:
         active_stream_hashes.add(stream_hash)
 
+    process = None
     try:
         logging.info(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
         process = subprocess.Popen(
@@ -83,48 +90,59 @@ def transcode_stream(original_url, output_dir, stream_hash):
             text=True
         )
 
-        # Starte separate Threads für stdout und stderr
         stdout_thread = threading.Thread(target=log_stream, args=(process.stdout, 'stdout', 'ffmpeg'))
         stderr_thread = threading.Thread(target=log_stream, args=(process.stderr, 'stderr', 'ffmpeg'))
 
         stdout_thread.start()
         stderr_thread.start()
 
-        # Warte, bis der FFmpeg-Prozess beendet ist
+        # Wait for the FFmpeg process to finish
         process.wait()
 
-        # Warte, bis beide Threads abgeschlossen sind
+        # Wait for both threads to complete
         stdout_thread.join()
         stderr_thread.join()
 
         return_code = process.returncode
         if return_code != 0:
             logging.error(f"ffmpeg exited with code {return_code}")
-            print(f"ffmpeg exited with code {return_code}")
+            raise RuntimeError(f"ffmpeg failed with code {return_code}")
         else:
             logging.info(f"Transcoding completed successfully for stream: {original_url}")
-            print(f"Transcoding completed successfully for stream: {original_url}")
 
     except Exception as e:
         logging.error(f"Error during transcoding: {e}")
-        print(f"Error during transcoding: {e}")
+
+        # Delete cache on error
+        try:
+            if os.path.exists(output_dir):
+                shutil.rmtree(output_dir)
+                logging.info(f"Deleted cache for failed stream: {output_dir}")
+        except Exception as e:
+            logging.error(f"Failed to delete cache for failed stream {output_dir}: {e}")
+
     finally:
-        # Entfernen des Streams aus der aktiven Menge
         with stream_lock:
             active_stream_hashes.discard(stream_hash)
             transcoding_tasks.pop(stream_hash, None)
+            if process and process.poll() is None:
+                process.terminate()
+                logging.info(f"Terminated ffmpeg process for stream: {stream_hash}")
 
 @main_bp.route('/transcoded/<stream_hash>/<filename>')
 def serve_transcoded(stream_hash, filename):
     """
     Serve the transcoded playlist and segment files.
     """
-    logging.info(f"Received request for transcoded file: {stream_hash}/{filename}")
+    global last_access
+    with stream_lock:
+        # Update the last access time within the lock
+        last_access[stream_hash] = time.time()
+    logging.debug(f"Received request for transcoded file: {stream_hash}/{filename}")
 
     stream_cache_dir = os.path.join(get_cache_dir(), stream_hash)
     logging.debug(f"Transcoding cache directory: {stream_cache_dir}")
 
-    # Sicherheitsüberprüfung zur Verhinderung von Directory Traversal
     if '..' in filename or filename.startswith('/'):
         logging.warning(f"Invalid filename requested: {filename}")
         return jsonify({"error": "Invalid filename"}), 400
@@ -136,7 +154,7 @@ def serve_transcoded(stream_hash, filename):
         logging.error(f"File not found: {file_path}")
         return jsonify({"error": "File not found"}), 404
 
-    logging.info(f"Serving file: {file_path}")
+    logging.debug(f"Serving file: {file_path}")
     return send_from_directory(stream_cache_dir, filename)
 
 @main_bp.route('/api/categories')
@@ -187,6 +205,7 @@ def proxy_image():
 
 @main_bp.route('/get_stream', methods=['POST'])
 def get_stream():
+    global last_access
     data = request.get_json()
     stream_url = data.get('stream_url')
 
@@ -198,7 +217,8 @@ def get_stream():
     playlist_path = os.path.join(stream_cache_dir, 'playlist.m3u8')
 
     with stream_lock:
-        # Wenn der Stream bereits aktiv ist oder bereits transkodiert wurde
+        # Update the last access time within the lock
+        last_access[stream_hash] = time.time()
         if stream_hash in active_stream_hashes or os.path.exists(playlist_path):
             if os.path.exists(playlist_path):
                 proxied_url = f"{request.host_url}transcoded/{stream_hash}/playlist.m3u8"
@@ -207,11 +227,9 @@ def get_stream():
             else:
                 return jsonify({'message': 'Transcoding in progress', 'stream_url': f"/transcoded/{stream_hash}/playlist.m3u8"}), 202
 
-        # Ein neuer Stream wird angefordert
-        # Cache löschen, aber aktive Streams ausschließen
+        # Clear old stream cache before starting a new one
         clear_stream_cache(exclude_hashes=active_stream_hashes)
 
-        # Prüfen, ob bereits eine Transkodierung läuft
         if stream_hash not in transcoding_tasks:
             os.makedirs(stream_cache_dir, exist_ok=True)
             logging.info(f"Starting transcoding for stream: {stream_url}")
@@ -220,8 +238,23 @@ def get_stream():
             thread.start()
             transcoding_tasks[stream_hash] = thread
 
-        # Transcoding läuft noch
         return jsonify({'message': 'Transcoding in progress', 'stream_url': f"/transcoded/{stream_hash}/playlist.m3u8"}), 202
+
+def monitor_streams():
+    app = current_app._get_current_object()
+    redis_client = app.redis
+    with app.app_context():
+        while True:
+            current_time = time.time()
+            stream_hashes = redis_client.keys("last_access:*")
+            for stream_hash_key in stream_hashes:
+                stream_hash = stream_hash_key.decode('utf-8').split(':')[1]
+                last_time = float(redis_client.get(stream_hash_key))
+                if current_time - last_time > 10:
+                    logging.info(f"Stopping transcoding due to inactivity: {stream_hash}")
+                    stop_stream(stream_hash)  # Use the stop_stream function to ensure proper cleanup
+                    redis_client.delete(stream_hash_key)
+            time.sleep(5)
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -266,3 +299,48 @@ def settings():
             m3u_url = ''
             logging.warning("config.json not found.")
         return render_template('settings.html', m3u_url=m3u_url)
+
+@main_bp.route('/keep_alive/<stream_hash>', methods=['POST'])
+def keep_alive(stream_hash):
+    redis_client = current_app.redis
+    redis_client.set(f"last_access:{stream_hash}", time.time())
+    logging.info(f"keep_alive received for stream: {stream_hash}")
+    return jsonify({'message': 'Stream access time updated'}), 200
+
+@main_bp.route('/reload_config', methods=['POST'])
+def reload_config():
+    """
+    Reload the configuration for all workers.
+    """
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as config_file:
+            config_data = json.load(config_file)
+            current_app.config['M3U_URL'] = config_data.get('m3u_url', '')
+            logging.info(f"M3U URL reloaded: {current_app.config['M3U_URL']}")
+        return jsonify({'message': 'Configuration reloaded successfully'}), 200
+    except Exception as e:
+        logging.error(f"Error reloading config.json: {e}")
+        return jsonify({'error': 'Failed to reload configuration'}), 500
+
+@main_bp.route('/stop_stream/<stream_hash>', methods=['POST'])
+def stop_stream(stream_hash):
+    with stream_lock:
+        if stream_hash in transcoding_tasks:
+            task = transcoding_tasks.pop(stream_hash)
+            if task.is_alive():
+                # Properly handle thread termination
+                logging.info(f"Stopping transcoding thread for stream: {stream_hash}")
+                # Note: Python threads cannot be forcefully terminated. We need to implement a flag to stop the thread gracefully.
+                # For now, we will just remove it from the active tasks and let it finish naturally.
+            active_stream_hashes.discard(stream_hash)
+            cache_dir = os.path.join(get_cache_dir(), stream_hash)
+            try:
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                    logging.info(f"Deleted cache for stopped stream: {cache_dir}")
+            except Exception as e:
+                logging.error(f"Failed to delete cache for {cache_dir}: {e}")
+        else:
+            logging.warning(f"No active transcoding task found for stream: {stream_hash}")
+    return jsonify({'message': 'Stream stopped successfully'}), 200

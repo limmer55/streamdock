@@ -5,8 +5,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies required for the application and ffmpeg
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN echo 'deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware' >/etc/apt/sources.list.d/debian-testing.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    intel-media-va-driver-non-free \
     ffmpeg \
+    vainfo \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -18,11 +21,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set environment variables for Flask
-ENV FLASK_APP run.py
-ENV FLASK_ENV production
+ENV FLASK_APP=run.py
+ENV FLASK_ENV=production
 
 # Expose the port the app runs on
 EXPOSE 6050
 
 # Command to start the application using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:6050", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:6050", "run:app", "--workers", "4"]

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- Meta and Title -->
     <meta charset="UTF-8">
@@ -8,23 +9,21 @@
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}"
-        sizes="32x32" type="image/png">
-    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}"
-        sizes="16x16" type="image/png">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicons/favicon.ico') }}"
-        type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-32x32.png') }}" sizes="32x32"
+        type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='favicons/favicon-16x16.png') }}" sizes="16x16"
+        type="image/png">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicons/favicon.ico') }}" type="image/x-icon">
 
     <!-- HLS.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <!-- Theme and Logo Script -->
     <script>
-            function setTheme() {
+        function setTheme() {
             const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
             const currentTheme = prefersDarkScheme.matches ? "dark" : "light";
             document.documentElement.setAttribute("data-theme", currentTheme);
@@ -57,14 +56,14 @@
     <!-- Loader Elements -->
     <div id="loaderOverlay" class="loader-overlay">
         <div id="loader" class="loader"></div>
-        <div id="loaderText" class="loader-text"></div> 
+        <div id="loaderText" class="loader-text"></div>
     </div>
 
 
     <!-- Sidebar (Channel Menu) -->
     <div id="sidebar" class="sidebar visible">
-        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}"
-            alt="StreamDock Logo" class="logo">
+        <img id="logo" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo"
+            class="logo">
         <input type="text" id="searchInput" placeholder="Search Channel..." class="search-bar">
         <div id="category-container"></div>
         <div id="search-results" style="display: none;"></div>
@@ -77,7 +76,8 @@
             <button class="menu-button toggle-sidebar-button" onclick="toggleSidebar()">☰
                 <span class="menu-text">Channel Menu</span>
             </button>
-            <img id="logo-mobile" src="{{ url_for('static', filename='streamdock-logo_light.png') }}" alt="StreamDock Logo" class="logo-mobile">
+            <img id="logo-mobile" src="{{ url_for('static', filename='streamdock-logo_light.png') }}"
+                alt="StreamDock Logo" class="logo-mobile">
 
             <!-- Settings Button -->
             <a href="/settings" class="menu-button settings-button">⚙️</a>
@@ -111,9 +111,9 @@
                 ? "{{ url_for('static', filename='default-logo_dark.png') }}"
                 : "{{ url_for('static', filename='default-logo_light.png') }}";
         }
-    
+
         function loadCategories() {
-            showLoader('Lade Kategorien...'); // Optional: Anpassbarer Text beim Laden der Kategorien
+            showLoader('Load categories...');
             fetch('/api/categories')
                 .then(response => response.json())
                 .then(data => {
@@ -144,9 +144,9 @@
                             const channelP = document.createElement('p');
                             channelP.classList.add('channel-name');
                             channelP.setAttribute('data-channel-name', channel.name);
-                            channelP.setAttribute('data-stream-url', channel.url); // Hier die Änderung
+                            channelP.setAttribute('data-stream-url', channel.url);
 
-                            // Proxy-Image verwenden, wenn nicht von i.imgur.com
+                            // Use proxy image if not from i.imgur.com
                             const iconUrl = channel.icon && !channel.icon.includes('i.imgur.com')
                                 ? `/proxy_image?url=${encodeURIComponent(channel.icon)}`
                                 : defaultIconUrl;
@@ -158,7 +158,7 @@
                             iconImg.alt = "Icon";
                             iconImg.classList.add('channel-icon');
 
-                            // Fehlerbehandlung für defekte Icons
+                            // Error handling for broken icons
                             iconImg.onerror = function () {
                                 this.onerror = null;
                                 this.src = defaultIconUrl;
@@ -191,7 +191,7 @@
                     alert('Categories could not be loaded. Please try again later.');
                 });
         }
-    
+
         window.addEventListener('DOMContentLoaded', function () {
             setTheme();
 
@@ -220,14 +220,14 @@
                 sidebar.classList.remove('visible');
             }
         });
-    
-    
+
+
         function toggleChannels(category) {
             const channelsList = document.getElementById(`channels-${category}`);
             const isVisible = channelsList.style.display === "block";
             channelsList.style.display = isVisible ? "none" : "block";
         }
-    
+
         document.getElementById("searchInput").addEventListener("input", function () {
             const searchValue = this.value.toLowerCase();
             const categoryContainer = document.getElementById("category-container");
@@ -261,21 +261,59 @@
                 });
             }
         });
-    
+
         function showLoader(text = '') {
             document.getElementById("loaderOverlay").classList.add("active");
             document.getElementById("loader").classList.add("active");
             document.getElementById("loaderText").textContent = text;
         }
-    
+
         function hideLoader() {
             document.getElementById("loaderOverlay").classList.remove("active");
             document.getElementById("loader").classList.remove("active");
             document.getElementById("loaderText").textContent = '';
         }
-    
+
         let currentHls = null;
-    
+        let keepAliveInterval;
+        let currentStreamHash = null;
+
+        function stopCurrentStream() {
+            if (currentHls) {
+                currentHls.destroy();
+                currentHls = null;
+            }
+            stopKeepAlive();
+            if (currentStreamHash) {
+                fetch(`/stop_stream/${currentStreamHash}`, {
+                    method: 'POST'
+                })
+                    .then(() => console.log(`Stopped stream: ${currentStreamHash}`))
+                    .catch(error => console.error('Error stopping stream:', error));
+                currentStreamHash = null;
+            }
+        }
+
+        function startKeepAlive(streamHash) {
+            if (keepAliveInterval) {
+                clearInterval(keepAliveInterval);
+            }
+            keepAliveInterval = setInterval(() => {
+                fetch(`/keep_alive/${streamHash}`, {
+                    method: 'POST'
+                })
+                    .then(() => console.log(`keep_alive gesendet für Stream: ${streamHash}`))
+                    .catch(error => console.error('Fehler beim Senden von keep_alive:', error));
+            }, 2000); // Send every 2 seconds
+        }
+
+        function stopKeepAlive() {
+            if (keepAliveInterval) {
+                clearInterval(keepAliveInterval);
+                keepAliveInterval = null;
+            }
+        }
+
         function playChannel(streamUrl, channelName, channelIcon) {
             console.log('Playing Channel:', channelName, 'Stream URL:', streamUrl);
             const playerContainer = document.getElementById("player-container");
@@ -327,7 +365,7 @@
                 currentHls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                     console.log('Hls.js manifest parsed, level:', data.levels);
                     video.play();
-                    hideLoader(); // Loader ausblenden, wenn Manifest geparst ist
+                    hideLoader();
 
                     // Hide subtitles
                     let textTracks = video.textTracks;
@@ -392,6 +430,10 @@
             const similarChannels = window.baseNameToChannels[baseName] || [];
             displaySimilarChannels(similarChannels, channelName);
 
+            // Extract the stream hash from the URL
+            const streamHash = streamUrl.split('/').slice(-2, -1)[0];
+            startKeepAlive(streamHash);
+
             function handleVideoError() {
                 hideLoader();
                 if (!errorShown) {
@@ -400,13 +442,14 @@
                 }
             }
         }
-    
+
         window.addEventListener('beforeunload', function () {
+            stopKeepAlive();
             if (currentHls) {
                 currentHls.destroy();
             }
         });
-    
+
         function displaySimilarChannels(similarChannels, currentChannelName) {
             var similarChannelsDiv = document.getElementById('similar-channels');
             var sidebarRightDiv = document.querySelector('.sidebar-right');
@@ -458,7 +501,7 @@
                 });
             }
         }
-    
+
         // Function to Toggle the Sidebar with Animation
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -467,7 +510,7 @@
             sidebar.classList.toggle('visible');
             overlay.classList.toggle('active');
         }
-    
+
         // Close Sidebar When Clicking on the Overlay
         document.getElementById('overlay').addEventListener('click', function () {
             const sidebar = document.getElementById('sidebar');
@@ -475,7 +518,7 @@
             sidebar.classList.remove('visible');
             overlay.classList.remove('active');
         });
-    
+
         // Ensure the Overlay is Hidden on Larger Screens
         window.addEventListener('resize', function () {
             const overlay = document.getElementById('overlay');
@@ -487,37 +530,38 @@
                 overlay.classList.add('active');
             }
         });
-    
+
         // Modify the handleChannelClick Function to Hide the Sidebar on Mobile Devices
         async function handleChannelClick(event) {
-            
+
             const channelElement = event.target.closest(".channel-name");
             if (channelElement) {
                 const externalStreamUrl = channelElement.getAttribute("data-stream-url");
                 const channelName = channelElement.getAttribute("data-channel-name");
-                const channelIcon = channelElement.getAttribute("data-channel-icon");                
+                const channelIcon = channelElement.getAttribute("data-channel-icon");
                 if (externalStreamUrl) {
                     try {
-                        
-                        showLoader('Stream wird transkodiert...'); // Benutzerdefinierter Text
+                        stopCurrentStream();
+                        showLoader('Transcoding stream...');
                         let response = await fetch('/get_stream', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({ stream_url: externalStreamUrl }) // Senden der externen URL
+                            body: JSON.stringify({ stream_url: externalStreamUrl })
                         });
 
                         let data = await response.json();
+                        const streamHash = data.stream_url.split('/').slice(-2, -1)[0];
 
                         if (response.status === 202) {
-                            // Transcoding in progress, poll alle 5 Sekunden
+                            // Transcoding in progress, poll every 5 seconds
                             let maxRetries = 10;
                             let retries = 0;
                             let streamReady = false;
 
                             while (retries < maxRetries && !streamReady) {
-                                await new Promise(resolve => setTimeout(resolve, 5000)); // Warte 5 Sekunden
+                                await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds
 
                                 response = await fetch('/get_stream', {
                                     method: 'POST',
@@ -531,11 +575,12 @@
 
                                 if (response.status === 200 && data.stream_url) {
                                     streamReady = true;
+                                    currentStreamHash = streamHash;
                                     playChannel(data.stream_url, channelName, channelIcon);
                                     document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
                                     channelElement.classList.add('selected');
 
-                                    // Sidebar auf mobilen Geräten ausblenden
+                                    // hide sidebar on mobile devices
                                     const sidebar = document.getElementById('sidebar');
                                     const overlay = document.getElementById('overlay');
                                     if (window.innerWidth <= 1000) {
@@ -554,12 +599,13 @@
                                 throw new Error('Transcoding timed out. Please try again later.');
                             }
                         } else if (response.status === 200 && data.stream_url) {
-                            // Transcoding bereits abgeschlossen
+                            // Transcoding already completed
+                            currentStreamHash = streamHash;
                             playChannel(data.stream_url, channelName, channelIcon);
                             document.querySelectorAll('.channel-name').forEach(ch => ch.classList.remove('selected'));
                             channelElement.classList.add('selected');
 
-                            // Sidebar auf mobilen Geräten ausblenden
+                            // hide sidebar on mobile devices
                             const sidebar = document.getElementById('sidebar');
                             const overlay = document.getElementById('overlay');
                             if (window.innerWidth <= 1000) {
@@ -579,13 +625,13 @@
                 }
             }
         }
-    
+
         document.addEventListener("click", handleChannelClick);
         document.addEventListener("touchstart", handleChannelClick);
-    
+
         var allChannels = [];
         var baseNameToChannels = {};
-    
+
         function normalizeChannelName(name) {
             name = name.toUpperCase();
             name = name.replace(/\(.*?\)/g, '');
@@ -635,12 +681,12 @@
                     return true;
                 } else {
                     console.error(data.error);
-                    alert('Fehler beim Löschen des Caches: ' + data.error);
+                    alert('Error while deleting cache: ' + data.error);
                     return false;
                 }
             } catch (error) {
-                console.error('Fehler beim Senden der Anfrage zum Löschen des Caches:', error);
-                alert('Ein unerwarteter Fehler ist beim Löschen des Caches aufgetreten.');
+                console.error('Error sending deleting request:', error);
+                alert('Unknown error while sending deleting request.');
                 return false;
             }
         }

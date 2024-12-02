@@ -35,6 +35,17 @@
         
         {% if success %}
             <p style="color: green;">{{ success }}</p>
+            <script>
+                fetch('/reload_config', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000); // Reload the page after 2 seconds
+                    })
+                    .catch(error => console.error('Error reloading configuration:', error));
+            </script>
         {% endif %}
         {% if error %}
             <p style="color: red;">{{ error }}</p>
@@ -68,7 +79,6 @@
                     const container = document.querySelector('.country-buttons-container');
                     container.innerHTML = '';
 
-                    // Länder filtern, die standardmäßig angezeigt werden sollen
                     const defaultCountries = countries.filter(country =>
                         country.name.toLowerCase().includes('united states') ||
                         country.name.toLowerCase().includes('united kingdom') ||
@@ -79,7 +89,6 @@
 
                     const hiddenCountries = countries.filter(country => !defaultCountries.includes(country));
 
-                    // Standard-Länder rendern
                     defaultCountries.forEach(country => {
                         const button = document.createElement('button');
                         button.className = 'country-button';
