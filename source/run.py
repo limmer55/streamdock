@@ -4,6 +4,11 @@ import threading
 import os
 import shutil
 
+
+# for development purposes
+#os.environ['HW_DEVICE'] = '/dev/dri/renderD128'
+#os.environ['HW_ACCEL'] = 'vaapi'
+
 # Logging-config
 logging.basicConfig(
     level=logging.INFO,
@@ -46,4 +51,4 @@ stream_monitor_thread.start()
 
 if __name__ == "__main__":
     clear_stream_cache()
-    app.run(host="0.0.0.0", port=6050, debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=6050, debug=True, use_reloader=False, threaded=True)

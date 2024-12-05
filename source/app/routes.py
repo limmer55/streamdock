@@ -354,7 +354,7 @@ def settings():
 def keep_alive(stream_hash):
     redis_client = current_app.redis
     redis_client.set(f"last_access:{stream_hash}", time.time())
-    logging.info(f"keep_alive received for stream: {stream_hash}")
+    logging.debug(f"keep_alive received for stream: {stream_hash}")
     return jsonify({'message': 'Stream access time updated'}), 200
 
 @main_bp.route('/reload_config', methods=['POST'])
