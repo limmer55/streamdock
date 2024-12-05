@@ -4,14 +4,32 @@ FROM python:3.11-slim
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies required for the application and ffmpeg
-RUN echo 'deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware' >/etc/apt/sources.list.d/debian-testing.list && \
+# Add required repositories and update package lists
+RUN echo 'deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware' > /etc/apt/sources.list.d/debian-testing.list && \
     apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    gnupg \
+    wget \
+    lbzip2 \
+    procps \
+    unzip \
+    locales \
+    tzdata \
+    libxml2 \
+    xz-utils \
+    curl \
+    lsof \
+    jq \
+    nethogs \
     intel-media-va-driver-non-free \
-    ffmpeg \
+    i965-va-driver \
+    mesa-va-drivers \
     vainfo \
+    ffmpeg \
     build-essential \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libvulkan1 \
+    mesa-vulkan-drivers && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .

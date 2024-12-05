@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   streamdock:
     container_name: streamdock
@@ -12,22 +10,13 @@ services:
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=production
-      - M3U_URL="https://iptv-org.github.io/iptv/index.m3u"
+      - M3U_URL=https://iptv-org.github.io/iptv/index.m3u
+      - HW_ACCEL=vaapi
+      - HW_DEVICE=/dev/dri/renderD128
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
-    volumes:
-      - .:/app
     depends_on:
-      redis:
-        condition: service_healthy
-
+      - redis
   redis:
-    container_name: redis
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    image: redis:latest
+    restart: always

@@ -45,23 +45,68 @@ def log_stream(stream, log_level, prefix):
         stream.close()
 
 
-def transcode_stream(original_url, output_dir, stream_hash):
+def transcode_stream(original_url, output_dir, stream_hash, hw_accel):
     """
     Transcode the original stream to HLS using ffmpeg.
     """
+    device_path = os.getenv('HW_DEVICE')  # Get the device path from the environment
+    if not device_path:
+        logging.error("HW_DEVICE is not set in the environment. Aborting transcoding.")
+
     playlist_path = os.path.join(output_dir, 'playlist.m3u8')
     segment_path = os.path.join(output_dir, 'segment_%03d.ts')
 
-    os.makedirs(output_dir, exist_ok=True)
     ffmpeg_command = [
         'ffmpeg',
         '-loglevel', 'error',
-        '-hwaccel', 'vaapi',
-        '-hwaccel_output_format', 'vaapi',
-        '-hwaccel_device', '/dev/dri/renderD128',
-        '-i', original_url,
-        '-vaapi_device', '/dev/dri/renderD128',
-        '-c:v', 'h264_vaapi',
+    ]
+
+    if hw_accel == 'vaapi':
+        ffmpeg_command.extend([
+            '-hwaccel', 'vaapi',
+            '-hwaccel_device', device_path,
+            '-hwaccel_output_format', 'vaapi',
+            '-i', original_url,
+            '-vaapi_device', device_path,
+            '-c:v', 'h264_vaapi',
+        ])
+    elif hw_accel == 'cuda':
+        ffmpeg_command.extend([
+            '-hwaccel', 'cuda',
+            '-hwaccel_output_format', 'cuda',
+            '-i', original_url,
+            '-c:v', 'h264_nvenc',
+        ])
+    elif hw_accel == 'qsv':
+        ffmpeg_command.extend([
+            '-hwaccel', 'qsv',
+            '-i', original_url,
+            '-c:v', 'h264_qsv',
+            '-global_quality', '25',  # QVBR quality parameter
+            '-look_ahead', '1',      # Enables lookahead for better compression
+        ])
+    elif hw_accel == 'vulkan':
+        ffmpeg_command.extend([
+            '-init_hw_device', f'vulkan=vk:{device_path}',
+            '-filter_hw_device', 'vk',
+            '-hwaccel', 'vulkan',
+            '-i', original_url,
+            '-c:v', 'h264_vulkan',
+        ])
+    elif hw_accel == 'amf':
+        ffmpeg_command.extend([
+            '-hwaccel', 'dxva2',  # AMD AMF uses DXVA2 on Linux/Windows
+            '-i', original_url,
+            '-c:v', 'h264_amf',
+        ])
+    else:
+        # Kein Device-Handling, da hier Software-Encoding erfolgt
+        ffmpeg_command.extend([
+            '-i', original_url,
+            '-c:v', 'libx264',
+        ])
+        
+    ffmpeg_command.extend([
         '-c:a', 'aac',
         '-ac', '2',
         '-f', 'hls',
@@ -75,7 +120,7 @@ def transcode_stream(original_url, output_dir, stream_hash):
         '-reconnect_streamed', '1',
         '-reconnect_delay_max', '2',
         '-preset', 'ultrafast'
-    ]
+    ])
 
     with stream_lock:
         active_stream_hashes.add(stream_hash)
@@ -128,6 +173,7 @@ def transcode_stream(original_url, output_dir, stream_hash):
             if process and process.poll() is None:
                 process.terminate()
                 logging.info(f"Terminated ffmpeg process for stream: {stream_hash}")
+
 
 @main_bp.route('/transcoded/<stream_hash>/<filename>')
 def serve_transcoded(stream_hash, filename):
@@ -212,6 +258,9 @@ def get_stream():
     if not stream_url:
         return jsonify({'error': 'No stream URL provided'}), 400
 
+    # Holen Sie die HW_ACCEL-Konfiguration
+    hw_accel = current_app.config.get('HW_ACCEL', '')
+
     stream_hash = hashlib.md5(stream_url.encode('utf-8')).hexdigest()
     stream_cache_dir = os.path.join(get_cache_dir(), stream_hash)
     playlist_path = os.path.join(stream_cache_dir, 'playlist.m3u8')
@@ -234,7 +283,8 @@ def get_stream():
             os.makedirs(stream_cache_dir, exist_ok=True)
             logging.info(f"Starting transcoding for stream: {stream_url}")
 
-            thread = threading.Thread(target=transcode_stream, args=(stream_url, stream_cache_dir, stream_hash))
+            # Übergeben Sie hw_accel an den Thread
+            thread = threading.Thread(target=transcode_stream, args=(stream_url, stream_cache_dir, stream_hash, hw_accel))
             thread.start()
             transcoding_tasks[stream_hash] = thread
 
@@ -340,7 +390,7 @@ def stop_stream(stream_hash):
                     shutil.rmtree(cache_dir)
                     logging.info(f"Deleted cache for stopped stream: {cache_dir}")
             except Exception as e:
-                logging.error(f"Failed to delete cache for {cache_dir}: {e}")
-        else:
-            logging.warning(f"No active transcoding task found for stream: {stream_hash}")
-    return jsonify({'message': 'Stream stopped successfully'}), 200
+                logging.error(f"Failed to delete cache for {cache_dir}: {e}")        
+            else:
+                logging.warning(f"No active transcoding task found for stream: {stream_hash}")    
+            return jsonify({'message': 'Stream stopped successfully'}), 200

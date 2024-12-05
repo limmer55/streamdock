@@ -34,9 +34,18 @@ def create_app():
             app.config['M3U_URL'] = ''
             logging.warning("config.json not found. 'M3U_URL' set to empty.")
 
+    # Load HW_ACCEL from environment variable
+    hw_accel_env = os.environ.get('HW_ACCEL')
+    if hw_accel_env:
+        app.config['HW_ACCEL'] = hw_accel_env
+        logging.info(f"Hardware acceleration loaded from environment: {app.config['HW_ACCEL']}")
+    else:
+        app.config['HW_ACCEL'] = ''
+        logging.info("No hardware acceleration specified. HW_ACCEL set to empty.")
+
     # Configure Redis connection
-    app.config['REDIS_URL'] = 'redis://redis:6379/0'
-    #app.config['REDIS_URL'] = 'redis://192.168.2.64:6379/0'
+    #app.config['REDIS_URL'] = 'redis://redis:6379/0'
+    app.config['REDIS_URL'] = 'redis://192.168.2.39:6379/0'
     app.redis = redis.StrictRedis.from_url(app.config['REDIS_URL'])
 
     # Check the connection to Redis, retrying every 5 seconds if it fails
