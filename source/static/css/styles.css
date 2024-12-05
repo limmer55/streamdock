@@ -315,7 +315,7 @@ body {
 
 .country-button.more {
     background-color: var(--secondary);
-    color: var(--text);
+    color: var (--text);
 }
 
 /* Adjust styles for smaller screens */
@@ -524,4 +524,40 @@ body {
     .menu-button.toggle-sidebar-button {
         display: none;
     }
+}
+
+
+details {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid var(--secondary);
+    border-radius: 4px;
+    background-color: var(--background);
+}
+
+summary {
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#vainfoOutput {
+    max-height: 200px;
+    overflow-y: scroll;
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid var(--secondary);
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+[data-theme="light"] #vainfoOutput {
+    background-color: #f0f0f0;
+    color: var(--text);
+}
+
+[data-theme="dark"] #vainfoOutput {
+    background-color: #333333;
+    color: var(--text);
 }

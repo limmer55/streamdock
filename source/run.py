@@ -5,9 +5,11 @@ import os
 import shutil
 
 
+
 # for development purposes
 #os.environ['HW_DEVICE'] = '/dev/dri/renderD128'
 #os.environ['HW_ACCEL'] = 'vaapi'
+#os.environ['TRANSCODEWITHCPU'] = 'true'
 
 # Logging-config
 logging.basicConfig(
@@ -50,5 +52,7 @@ stream_monitor_thread = threading.Thread(target=start_monitor_streams, args=(app
 stream_monitor_thread.start()
 
 if __name__ == "__main__":
+    os.environ.setdefault('TRANSCODEWITHCPU', 'false')
+    
     clear_stream_cache()
     app.run(host="0.0.0.0", port=6050, debug=True, use_reloader=False, threaded=True)

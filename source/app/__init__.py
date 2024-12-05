@@ -41,7 +41,11 @@ def create_app():
         logging.info(f"Hardware acceleration loaded from environment: {app.config['HW_ACCEL']}")
     else:
         app.config['HW_ACCEL'] = ''
-        logging.info("No hardware acceleration specified. HW_ACCEL set to empty.")
+        logging.info("No hardware acceleration specified. Streams will not be transcoded. ")
+
+    # Load the TRANSCODEWITHCPU environment variable
+    transcode_with_cpu = os.environ.get('TRANSCODEWITHCPU', 'false').lower() in ['true', '1', 'yes']
+    app.config['TRANSCODEWITHCPU'] = transcode_with_cpu
 
     # Configure Redis connection
     app.config['REDIS_URL'] = 'redis://redis:6379/0'

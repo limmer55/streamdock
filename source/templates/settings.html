@@ -63,6 +63,14 @@
             <div class="country-buttons-container"></div>
         </div>
         
+        <details>
+            <summary>Debug</summary>
+            <label>HW_DEVICE: {{ hw_device if hw_device else "Not set" }}</label><br>
+            HW_ACCEL: {{ hw_accel if hw_accel else "Not set" }}</p>
+            <button id="vainfoButton" type="button" class="menu-button" style="margin-top: 10px;">Run Vainfo</button>
+            <div id="vainfoOutput" style="max-height: 200px; overflow-y: scroll; padding: 10px; margin-top: 10px;"></div>
+        </details>
+        
         <script>
             let allCountries = []; 
         
@@ -143,6 +151,17 @@
                     }
                 });
 
+            document.getElementById('vainfoButton').addEventListener('click', () => {
+                fetch('/run_vainfo')
+                    .then(response => response.json())
+                    .then(data => {
+                        const outputDiv = document.getElementById('vainfoOutput');
+                        outputDiv.textContent = data.output;
+                    })
+                    .catch(error => {
+                        console.error('Error while running vainfo:', error);
+                    });
+            });
         </script>
         
 
