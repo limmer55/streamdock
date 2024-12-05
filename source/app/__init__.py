@@ -44,8 +44,8 @@ def create_app():
         logging.info("No hardware acceleration specified. HW_ACCEL set to empty.")
 
     # Configure Redis connection
-    #app.config['REDIS_URL'] = 'redis://redis:6379/0'
-    app.config['REDIS_URL'] = 'redis://192.168.2.39:6379/0'
+    app.config['REDIS_URL'] = 'redis://redis:6379/0'
+    #app.config['REDIS_URL'] = 'redis://192.168.2.39:6379/0'
     app.redis = redis.StrictRedis.from_url(app.config['REDIS_URL'])
 
     # Check the connection to Redis, retrying every 5 seconds if it fails
